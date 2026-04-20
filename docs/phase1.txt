@@ -1,0 +1,1099 @@
+
+IBS HEAVY INDUSTRY
+TÀI LIỆU YÊU CẦU NGHIỆP VỤ
+QA/QC PLATFORM
+Business Requirements Document (BRD)
+
+Phiên bản: 1.0
+Ngày ban hành: 17/04/2026
+Trạng thái: Ready for Development Team Review
+
+Hạng mục	Nội dung
+Mã tài liệu	IBSHI-QAQC-BRD-v1.0
+Chủ sở hữu (Owner)	GD Toan – Giám đốc QA/QC
+Người soạn (Author)	AI Chief of Staff (Claude) phối hợp BA/PM IBS HI
+Người phê duyệt	Chairman Le Duy Huyen – IBS Heavy Industry
+Đối tượng sử dụng	Team phát triển QAQC Platform, BA, QA Lead, DevOps
+Tài liệu nguồn	IBSHI-QAQC-PLATFORM-MASTER-v1.1 (15/04/2026) + 12 tài liệu thiết kế + NAS live scan
+Liên quan tới	IBS ERP Production (song hành, tích hợp nhẹ: SSO + file attachment)
+Phiên bản Spec tham chiếu	QAQC_Module_Spec_v2_Toan_Approved
+Lịch sử thay đổi tài liệu
+Tài liệu này được duy trì theo nguyên tắc kiểm soát phiên bản. Mọi thay đổi bản chất về phạm vi, kiến trúc, quy tắc nghiệp vụ đều phải được cập nhật ở bảng dưới và đánh phiên bản mới. Sau khi được phê duyệt, mọi thay đổi chỉ được chấp nhận qua Change Request có trích dẫn bản gốc và lý do.
+Phiên bản	Ngày	Người cập nhật	Mô tả thay đổi	Trạng thái
+0.1	10/04/2026	BA Team	Khung sườn BRD khởi tạo từ Spec v2 của GD Toan	Draft
+0.9	15/04/2026	AI Chief of Staff	Đồng bộ với kết quả live scan NAS 15/04 (13 nhóm tiêu chuẩn, 348 MTC, 14 dự án)	Internal Review
+1.0	17/04/2026	AI Chief of Staff	Ban hành chính thức: 10 IP, 8 Module, 7 AI model, Roadmap 4 phase, chiến lược Song hành – tích hợp nhẹ với IBS ERP	Ready for Review
+Mục lục
+Mục lục dưới đây được sinh tự động. Khi mở tài liệu trong Microsoft Word, chọn nhấp chuột phải > Update Field để hiển thị số trang hiện hành.
+
+Phần A – Tổng quan (Overview)
+A.1 Tóm tắt điều hành (Executive Summary)
+QA/QC Platform là hệ thống quản lý đảm bảo chất lượng và kiểm soát chất lượng chuyên dụng của IBS Heavy Industry (IBS HI), phục vụ toàn bộ chu trình chế tạo thiết bị nặng (heavy fabrication) từ nhập vật tư – gia công – hàn – NDT – sơn – cách nhiệt – đóng gói cho tới tổng hợp hồ sơ MDR bàn giao khách hàng.
+Hiện tại công tác QA/QC của IBS HI đang phụ thuộc vào cấu trúc thư mục NAS (348 folder Material Certificate chưa chuẩn hóa, 13 nhóm tiêu chuẩn chia 3 tầng, 14 dự án đang triển khai với 41 sub-folder MDR đặc thù mỗi dự án) và một số công cụ nội bộ rời rạc (QAQC_Platform.html, Standards_Lookup_Tool.html, QAQC_Report_Generator.py). Cách làm này không còn đáp ứng yêu cầu truy vết (traceability), bảo trì tri thức, và đặc biệt là cam kết chất lượng với các khách hàng quốc tế (Siemens NEOM, Braden/GE Vernova, Siempelkamp, WNC, FAUDI…).
+BRD này mô tả yêu cầu nghiệp vụ và yêu cầu phi chức năng để xây dựng QA/QC Platform theo hướng kiến trúc Standalone (đã được GD Toan phê duyệt 01/04/2026), vận hành trên Port 8767, song hành cùng IBS ERP Production hiện hữu ở mức độ tích hợp nhẹ (chỉ chia sẻ SSO người dùng và đồng bộ file attachment), nhằm:
+    • Chuẩn hóa và số hóa toàn bộ quy trình QA/QC, thay thế công cụ thủ công và file rời trên NAS.
+    • Xây dựng cơ sở dữ liệu tiêu chuẩn (Standards Knowledge Base) tập trung và có khả năng AI tra cứu.
+    • Tự động hóa MIR, NCR, Welding, NDT, MDR, Calibration.
+    • Triển khai 7 AI model hỗ trợ tra cứu – đối chiếu – OCR – phân tích ảnh – sinh bản đồ mối hàn – phân tích xu hướng.
+    • Liên kết với mục tiêu chiến lược của IBS One Platform: cung cấp một lớp chất lượng độc lập nhưng đồng bộ với sản xuất và thương mại.
+Tài liệu được xây dựng sao cho team phát triển có thể scope theo từng Phase (Phase 1 – Q3/2026 là MVP bắt buộc), đồng thời BA và stakeholder có thể dùng làm tham chiếu khi cần đàm phán phạm vi hoặc ra quyết định ưu tiên.
+A.2 Bối cảnh & Vấn đề hiện tại
+A.2.1 Bối cảnh vận hành QA/QC của IBS HI
+IBS HI là nhà chế tạo thiết bị nặng cho các khách hàng quốc tế. Đặc thù sản phẩm (pressure vessel, boiler, duct, tank, module turbine) đòi hỏi QC nghiêm ngặt theo ASME, API, AWS, ASTM, DIN/EN, JIS, ISO cũng như các tiêu chuẩn địa phương và khách hàng.
+Kết quả live scan NAS ngày 15/04/2026 cho thấy hiện trạng dữ liệu như sau:
+Hạng mục dữ liệu	Số lượng hiện tại	Vấn đề
+Nhóm tiêu chuẩn (04. STANDARDS)	13 nhóm, 3 tầng	Phân tán, không có index; phụ thuộc kinh nghiệm QC
+File PDF tiêu chuẩn	387+ PDF	Chưa OCR, không searchable, không gắn metadata
+Folder Material Certificate (11 CHUNG CHI VAT TU)	348 folder	Đặt tên lẫn lộn: theo ngày, theo vật liệu, theo NCC
+Dự án QA/QC đang chạy	14 dự án (IP071 – IP110)	Mỗi dự án ~41 sub-folder trong 04. Report, tên không chuẩn
+Tiêu chuẩn AS/NZS	0	Thiếu hoàn toàn – chặn dự án Whyalla (IP080) và tương lai Úc
+Tiêu chuẩn ASTM còn thiếu	9 specs	A53, A106, A252, A283, A500, A516, A572, A588, A992
+Tiêu chuẩn AWS còn thiếu	4 specs	A5.18, A5.20, A5.28, D1.1 (code hàn chính)
+Prototype nội bộ	6 công cụ rời	Không đồng bộ, không audit trail, không backup
+A.2.2 Bài toán nghiệp vụ cần giải quyết
+    • QC Inspector không thể tra cứu tiêu chuẩn nhanh khi đứng tại hiện trường (xưởng mạng không ổn định, NAS chậm).
+    • Kiểm tra MTC hoàn toàn thủ công, dễ bỏ sót thành phần hóa học hoặc cơ tính không đạt.
+    • NCR ghi nhận qua Excel, không liên kết với Inspection, không có CAPA tracking.
+    • Welder Qualification và WPS/PQR nằm trong các folder Word, không có continuity tracking.
+    • MDR cuối dự án mất 2-3 tuần để thu thập thủ công từ nhiều thư mục rải rác.
+    • Calibration equipment theo dõi trong file Excel chung, dễ lạc, không có cảnh báo hết hạn.
+    • ISO Audit (9001/14001/45001) cần bằng chứng có version – hiện phải tìm thủ công.
+    • Khách hàng quốc tế đòi hỏi bộ MDR chuẩn quốc tế, hiện còn nhiều file scan mờ và trùng lặp.
+A.3 Mục tiêu nghiệp vụ (Business Objectives)
+Các mục tiêu dưới đây sẽ là cơ sở để đánh giá thành công của Platform sau Phase 1 (Q3/2026) và Phase 2 (Q4/2026). KPI cụ thể được đo trên dữ liệu sản xuất thực.
+Mã	Mục tiêu nghiệp vụ	Chỉ số đo lường (KPI)	Mục tiêu năm 1
+BO-01	Chuẩn hóa và số hóa toàn bộ tiêu chuẩn đang dùng	% tiêu chuẩn đã index + OCR / tổng tiêu chuẩn	≥ 95%
+BO-02	Giảm thời gian tra cứu tiêu chuẩn cho QC	Thời gian trung bình tra 1 tiêu chuẩn (s)	< 10s (AI Lookup)
+BO-03	Chặn vật tư không đạt vào kho (quarantine)	% lô vật tư phát hành sai MTC	< 0.5%
+BO-04	Tự động hóa đối chiếu MTC – Tiêu chuẩn	% MTC được AI đối chiếu tự động	≥ 80%
+BO-05	Tăng truy vết từ vật tư → sản phẩm cuối	% sản phẩm có traceability đầy đủ	100% với Whyalla
+BO-06	Giảm thời gian build MDR cuối dự án	Số ngày công build MDR / dự án	≤ 3 ngày
+BO-07	Theo dõi hiệu lực Welder Qualification liên tục	% thợ hàn có continuity hợp lệ tại mọi thời điểm	100%
+BO-08	Quản lý Calibration thiết bị tập trung	% thiết bị đo quá hạn bị cảnh báo sớm 30 ngày	100%
+BO-09	Chuẩn hoá NCR và CAPA	% NCR đóng đúng hạn (SLA theo phân loại)	≥ 90%
+BO-10	Bằng chứng phục vụ ISO audit sẵn sàng	% evidence auto-generated / yêu cầu audit	≥ 70%
+BO-11	Giảm NCR lặp lại (cùng root cause)	Tỷ lệ NCR lặp lại trong 6 tháng	≤ 15%
+BO-12	Đánh giá supplier định lượng	% supplier có scorecard tự động	100% với supplier đang active
+A.4 Liên kết với mục tiêu tổng thể của IBS One Platform
+IBS One Platform hướng tới một hệ sinh thái chuyển đổi số toàn diện: ERP (sản xuất – kho – kế hoạch – thương mại – tài chính), HRM, CRM và QA/QC. QA/QC Platform là một mảnh ghép độc lập nhưng phục vụ các mục tiêu chiến lược sau:
+Mục tiêu IBS One Platform	Cách QA/QC Platform đóng góp
+Một nguồn sự thật (Single Source of Truth)	Standards Knowledge Base là nguồn sự thật duy nhất cho mọi tiêu chuẩn dùng trong doanh nghiệp; mọi module khác (ERP, Sản xuất, Thương mại) tham chiếu tới ID tiêu chuẩn duy nhất.
+Chất lượng là điều kiện tiên quyết	Nguyên tắc quarantine: vật tư không vào kho chính thức, sản phẩm không qua bước tiếp theo nếu chưa được QC ký duyệt trên Platform.
+Dữ liệu sẵn sàng cho AI	Cấu trúc metadata + OCR + naming chuẩn hoá ngay từ đầu để các AI model (AI-1 → AI-7) và mô hình tương lai có thể huấn luyện hiệu quả.
+Đáp ứng khách hàng quốc tế	Hồ sơ MDR chuẩn, có version, sẵn sàng bàn giao cho Siemens / Braden / GE Vernova / Siempelkamp với tiêu chuẩn của họ.
+An toàn và tuân thủ	Bằng chứng ISO 9001/14001/45001 sinh tự động, phục vụ kiểm toán nội bộ và bên ngoài không cần huy động nhân sự.
+Năng suất nhân sự	Thay thế tra cứu, nhập liệu, tổng hợp thủ công bằng AI assistance – giải phóng QC làm công việc phán đoán giá trị cao.
+Tôn trọng ranh giới hệ thống	QAQC KHÔNG can thiệp vào workflow P1.1–P6.5 của ERP; chỉ xuất tín hiệu outbound khi thay đổi trạng thái chất lượng.
+A.5 Nguyên tắc kiến trúc: Standalone + Song hành ít tích hợp
+Quyết định kiến trúc của GD Toan (01/04/2026) được BRD này tôn trọng và cụ thể hóa thành 7 nguyên tắc ràng buộc cho team phát triển. Các nguyên tắc này là không thể thương lượng trong phạm vi Phase 1 – Phase 2:
+    • Nguyên tắc 1 – Độc lập triển khai: QAQC chạy trên Port 8767, repo riêng, pipeline CI/CD riêng, release độc lập với ERP.
+    • Nguyên tắc 2 – Cơ sở dữ liệu riêng: PostgreSQL schema riêng (qaqc); không chia sẻ bảng với ERP; dữ liệu đồng bộ từ ERP được đánh dấu read-only + nguồn gốc.
+    • Nguyên tắc 3 – Tích hợp nhẹ (Light Integration): Chỉ 2 tích hợp bắt buộc — (i) SSO/User sync, (ii) File attachment sync. Không có Event Bridge 2 chiều phức tạp, không gắn vào workflow-engine.ts của ERP.
+    • Nguyên tắc 4 – Tham chiếu lỏng (Loose Reference): Project Code, BOM line, PO đồng bộ xuống QAQC dưới dạng snapshot định kỳ (nightly) hoặc on-demand API read, không phải joint-transaction realtime.
+    • Nguyên tắc 5 – Chất lượng là nguồn dữ liệu: QAQC KHÔNG thay đổi dữ liệu ERP. Khi cần thông báo ngược (ví dụ: MIR ACCEPT) dùng outbound webhook để ERP chủ động đồng bộ lại – giảm phụ thuộc.
+    • Nguyên tắc 6 – AI có trách nhiệm (Responsible AI): Mọi đầu ra AI ở lĩnh vực an toàn (tiêu chuẩn, MTC, NDT, weld) đều có confidence score và bắt buộc QC ký số thủ công trước khi coi là quyết định chính thức.
+    • Nguyên tắc 7 – Offline-tolerant tại xưởng: App inspection phải chịu mất mạng ngắn hạn (queue local, sync khi khôi phục) tối thiểu 2 giờ.
+Ghi chú của Chairman: "Platform chất lượng phải chạy một mình được. Nếu ERP gãy, QAQC vẫn phải chạy, vì khách hàng không chờ chúng ta sửa ERP để nhận MDR."
+A.6 Phạm vi (Scope)
+A.6.1 In-scope (Có trong phạm vi)
+    • 8 module nghiệp vụ trong Spec v2: ITP Management, Inspection Execution (IP01-IP10), NCR, Welding, NDT, MIR, MDR, Calibration.
+    • Standards Knowledge Base (13 nhóm, 3 tầng, tối thiểu 387 PDF + cập nhật tiêu chuẩn mới).
+    • 7 AI model theo ưu tiên 3 phase.
+    • Cổng tra cứu tiêu chuẩn cho Sales/BD/Engineering ở chế độ read-only.
+    • Mobile inspection app (Phase 4) cho QC hiện trường.
+    • RFI 2 chiều (nội bộ + khách hàng) với đính kèm, phản hồi, SLA.
+    • Supplier portal tối giản (Phase 4) cho supplier upload MTC và RFI.
+    • Tích hợp nhẹ: SSO từ IBS ERP + đồng bộ file attachment; outbound webhook MIR/NCR tới ERP.
+    • Tích hợp Telegram – tái sử dụng bot của IBS ERP để gửi thông báo nhóm.
+A.6.2 Out-of-scope (Không thuộc phạm vi)
+    • Thay thế ERP / MES / PLM – QAQC không quản lý kế hoạch sản xuất, tồn kho chi tiết, BOM master.
+    • Quản lý nhân sự, chấm công, lương (thuộc HRM).
+    • Quản lý khách hàng, opportunity (thuộc CRM/BD).
+    • Workflow P1.1 → P6.5 của IBS ERP – QAQC không can thiệp vào quy trình, chỉ tham chiếu dự án qua Project Code.
+    • Đặt hàng / thanh toán với nhà cung cấp (thuộc Thương mại).
+    • Lưu trữ và mua mới tiêu chuẩn ở cấp pháp lý – Platform chỉ lưu trữ và cập nhật phiên bản.
+    • Quản lý tiền bạc, giá thành: Platform không chứa công thức giá, không liên quan PnL.
+A.6.3 Giả định & Ràng buộc
+    • Giả định 1: NAS Synology (ibshi.synology.me) duy trì uptime ≥ 99% để QAQC có thể đồng bộ nightly.
+    • Giả định 2: Tiêu chuẩn còn thiếu (AS/NZS, ASTM A53/A106/..., AWS D1.1) sẽ được bộ phận Admin mua bổ sung trước khi Phase 1 go-live.
+    • Giả định 3: IBS ERP cung cấp endpoint SSO (OAuth2 / JWT) sẵn sàng trước khi Phase 1 phát triển user module.
+    • Ràng buộc 1: Ngôn ngữ giao diện bắt buộc Tiếng Việt (mặc định) + Tiếng Anh (tùy chọn người dùng).
+    • Ràng buộc 2: Platform phải chạy on-premise (hạ tầng IBS HI) do dữ liệu liên quan khách hàng quốc phòng gián tiếp.
+    • Ràng buộc 3: Chi phí license AI phải được phê duyệt bởi Chairman; ưu tiên model self-hosted nơi khả thi.
+A.7 Thuật ngữ & Viết tắt
+Thuật ngữ / Viết tắt	Diễn giải
+QA	Quality Assurance – Đảm bảo chất lượng (quy trình, phòng ngừa)
+QC	Quality Control – Kiểm soát chất lượng (thực thi kiểm tra, phát hiện)
+ITP	Inspection & Test Plan – Kế hoạch kiểm tra và thử nghiệm
+MIR	Material Receiving Inspection – Kiểm tra vật tư đầu vào
+MTC	Material Test Certificate – Chứng chỉ vật tư
+NCR	Non-Conformance Report – Báo cáo không phù hợp
+CAPA	Corrective Action and Preventive Action
+WPS / PQR	Welding Procedure Specification / Procedure Qualification Record
+NDT / NDE	Non-Destructive Testing / Examination
+MDR	Manufacturing Data Report – Hồ sơ chất lượng cuối dự án
+IPxx (IP01-IP10)	Inspection Point trong Fab Pipeline
+IPxxx (3 số: IP071…)	Project Code nội bộ IBS HI
+Fab Pipeline	Chuỗi 11 bước chế tạo của IBS HI: Pre-Fab → CUT → FIT → WLD → MCH → TRF/FAT → BLS → INS → PCK/RTS
+RFI	Request For Information – Yêu cầu làm rõ thông tin
+Quarantine	Trạng thái cách ly vật tư / sản phẩm trước khi được chấp nhận
+SSO	Single Sign-On – Đăng nhập một lần dùng chung tài khoản
+Confidence score	Điểm tin cậy của đầu ra AI (0.0 - 1.0)
+Hold point / Witness point	Điểm giữ (dừng chờ QC) / Điểm chứng kiến (báo trước)
+Outbound webhook	Cơ chế QAQC phát sự kiện ra hệ thống ngoài (không nhận vào)
+Snapshot đồng bộ	Bản chụp dữ liệu từ ERP sang QAQC theo chu kỳ (nightly)
+Phần B – Stakeholder, Người dùng & Vai trò
+B.1 Stakeholders chính
+Tham chiếu Stakeholder để đảm bảo dev team hiểu động lực và ràng buộc của từng bên khi ra quyết định thiết kế.
+Stakeholder	Vai trò trong dự án	Mong đợi chính
+Chairman Le Duy Huyen	Executive Sponsor	Platform là đòn bẩy chất lượng – tạo lợi thế cạnh tranh, đủ năng lực nhận hợp đồng chất lượng cao (Úc, châu Âu).
+GD Toan (QA/QC Director)	Business Owner – Approver chính	Kiến trúc standalone, lấy Spec v2 làm chuẩn, không rối với ERP.
+Giám đốc Sản xuất	Stakeholder vận hành	Không bị QAQC chặn dây chuyền quá mức; bảng cảnh báo và SLA rõ ràng cho hold/witness.
+Giám đốc Thương mại	Stakeholder dữ liệu	MIR trơn tru, supplier performance truy vết tốt, PO/PR đối chiếu đúng.
+Giám đốc Kỹ thuật	Stakeholder kỹ thuật	Dữ liệu BOM/DWG tham chiếu được; weld map sinh từ bản vẽ chính xác.
+IT Manager	Stakeholder vận hành hệ thống	QAQC không phá vỡ ổn định của IBS ERP; uptime cao; dễ giám sát.
+QC Inspector / QC Engineer	Người dùng đầu cuối chính	Giao diện nhanh, dùng được ngoài xưởng, ít nhập tay.
+Welding Engineer	Người dùng chuyên sâu	Quản lý WPS/PQR rõ ràng, continuity tracking thợ hàn.
+NDT Vendor (bên thứ 3)	Người dùng bên ngoài	Cổng upload kết quả NDT, nhận RFI hai chiều.
+Supplier	Người dùng bên ngoài (Phase 4)	Upload MTC, nhận RFI.
+Khách hàng cuối (Siemens, Braden…)	Nhận sản phẩm MDR	Bộ MDR đầy đủ, chuẩn định dạng, có index.
+Auditor ISO	Người dùng đặc biệt	Truy vết evidence nhanh theo clause ISO.
+B.2 User Personas
+B.2.1 QC Inspector – Trần Văn Dũng (đại diện)
+Thông tin: Kỹ sư QC hiện trường, 5 năm kinh nghiệm, làm việc chủ yếu ở xưởng và bàn kiểm tra.
+Thiết bị: Tablet 10 inch, smartphone cá nhân, máy ảnh công ty.
+Mục tiêu: Hoàn thành đúng và nhanh các điểm kiểm tra IP01-IP10 được phân công trong ngày.
+Đau đớn: Tra tiêu chuẩn trên NAS chậm; file MTC in ra mờ; phải chờ mạng; ghi checklist bằng tay rồi nhập lại.
+Kỳ vọng từ Platform: Checklist ngắn, nút lớn, chụp ảnh trực tiếp vào record, chữ ký số nhanh, offline 2 giờ.
+B.2.2 QC Manager – GD Toan
+Mục tiêu: Giám sát toàn bộ hoạt động QA/QC công ty; duyệt NCR nghiêm trọng; ký MIR Decision; đảm bảo SLA.
+Đau đớn: Không có bức tranh thời gian thực; báo cáo thủ công; khó theo dõi KPI supplier.
+Kỳ vọng: Dashboard tùy biến, cảnh báo sớm, khả năng drill-down từ KPI tới evidence.
+B.2.3 Welding Engineer
+Mục tiêu: Quản lý WPS/PQR; huấn luyện, chứng nhận và theo dõi thợ hàn; sinh weld map.
+Đau đớn: Continuity 6 tháng hiện theo dõi Excel, dễ sót; vẽ weld map thủ công.
+Kỳ vọng: Module Welding tập trung; AI hỗ trợ sinh weld map; cảnh báo hết hiệu lực thợ.
+B.2.4 Material Receiver / Commercial
+Mục tiêu: Phối hợp QC kiểm tra lô hàng nhập; đảm bảo PR→PO→MTC nối liền.
+Đau đớn: MTC đến chậm; chuỗi PR/PO/MTC đứt; điều phối NCC qua email.
+Kỳ vọng: MIR workflow rõ, cảnh báo thiếu MTC, cổng supplier upload trực tiếp (Phase 4).
+B.2.5 MDR Compiler / Document Controller
+Mục tiêu: Tổng hợp MDR cuối dự án đầy đủ, có index, đúng định dạng khách hàng.
+Đau đớn: Lục 41 sub-folder trong 04. Report; đổi tên; scan; ghép PDF; 2-3 tuần/dự án.
+Kỳ vọng: MDR Auto-Builder kéo trực tiếp từ DB, sinh PDF có bookmark và index.
+B.2.6 NDT Vendor (Bên thứ 3)
+Mục tiêu: Hoàn thành RT/UT/MT/PT được giao, gửi kết quả.
+Đau đớn: Gửi email đính kèm, khó truy ngược; không thấy trạng thái RFI.
+Kỳ vọng: Portal riêng, giao việc rõ, upload kết quả, nhận phản hồi.
+B.2.7 Auditor ISO
+Mục tiêu: Kiểm tra tuân thủ ISO 9001/14001/45001.
+Đau đớn: Phải nhờ QC xuất evidence thủ công; không có mapping clause ↔ evidence.
+Kỳ vọng: Màn hình Audit-Ready: mapping clause → record + file + phiên bản.
+B.3 Ma trận vai trò & quyền (RBAC Matrix) – tổng quan
+Hệ thống QA/QC Platform định nghĩa 12 role gốc. Tên role trong ngoặc là role code nội bộ dùng để cấu hình quyền. Ma trận quyền chi tiết theo từng module sẽ được mô tả lại trong phần D.
+Role	Code	Mức độ quyền tổng quát
+QC Director	QC-DIR	Full quyền; duyệt NCR nghiêm trọng; ký MDR bàn giao.
+QC Manager	QC-MGR	Duyệt MIR decision, duyệt ITP, đóng NCR mức trung bình, chỉ định NDT vendor.
+QC Inspector	QC-INS	Thực thi Inspection (IP01-IP10); tạo NCR (draft); chụp ảnh; ký số cho các điểm được phân công.
+Welding Engineer	WLD-ENG	Tạo/cập nhật WPS/PQR; quản lý Welder Qualification; tạo Weld Map.
+NDT Coordinator (nội bộ)	NDT-COR	Tạo NDT Request, phân công NDT Vendor, duyệt kết quả.
+NDT Vendor (ngoài)	NDT-VEN	Upload kết quả NDT thuộc RFI được phân công; không xem dữ liệu khác.
+Material Receiver	MAT-REC	Thực hiện stage Document Check / Warehouse Entry trong MIR.
+Warehouse Keeper	WH-KEEP	Cập nhật stage Warehouse Entry, in label, đóng lô.
+MDR Compiler	MDR-CMP	Vận hành MDR Builder, upload file bổ sung, ký MDR draft.
+Supplier (Phase 4)	SUP	Chỉ upload MTC liên quan PO được cấp token; không xem nội bộ.
+Auditor	AUD	Read-only toàn hệ thống, xuất evidence, không chỉnh sửa.
+System Admin	SYS-ADM	Cấu hình role, workflow, template; không xem dữ liệu dự án trừ khi được cấp phép.
+B.4 Tương ứng Role với IBS ERP (role code R01–R10)
+Để đồng bộ SSO và tránh nhầm lẫn quyền, role QAQC được map với role code IBS ERP. Mapping là 1-n: một role ERP có thể sinh nhiều role QAQC sau khi được cấp cụ thể trong QAQC Platform.
+Role QAQC	Role IBS ERP	Nguyên tắc cấp phát
+QC Director / Manager / Inspector	R09 (QC)	Nhân sự R09 được cấp role QAQC nền (QC-INS); QC Director/Manager cấp thêm thủ công.
+Welding Engineer	R06 (Production)	Cấp thủ công cho kỹ sư hàn trong R06.
+NDT Coordinator	R09 hoặc R06	Cấp thủ công, có thể nhiều role.
+Material Receiver / Warehouse Keeper	R05 (Warehouse)	Tự động cấp cho R05.
+MDR Compiler	R09 hoặc R02 (PM)	Cấp thủ công theo dự án.
+Supplier / NDT Vendor	External (không thuộc R01-R10)	Tạo tài khoản ngoài trong QAQC với scope theo PO/RFI.
+Auditor	R01 (BGĐ) hoặc R10 (Admin)	Cấp theo yêu cầu audit, có thời hạn.
+B.5 Bên liên quan bên ngoài
+    • Khách hàng (End-customer): Siemens NEOM, Braden/GE Vernova, VPI, WNC, Siempelkamp, FAUDI, SED. Nhận MDR và có thể tham gia Hold Point qua Witness Visit.
+    • NDT Vendor: Công ty NDT bên thứ 3 có tài khoản giới hạn trên Platform.
+    • Supplier vật tư: (Phase 4) Upload MTC, trả lời RFI vật tư.
+    • Auditor bên ngoài (BV, DNV, Lloyd’s...): Tài khoản read-only có hiệu lực trong kỳ kiểm toán.
+    • Cơ quan quản lý: Bộ KHCN (TCVN), Cục Tiêu chuẩn Đo lường Chất lượng – tham chiếu khi có thanh kiểm tra.
+Phần C – Kiến trúc tổng thể & Môi trường
+C.1 Quyết định kiến trúc (Architecture Decision Record tóm tắt)
+Tháng 04/2026 đã có 2 phương án được đề xuất. GD Toan phê duyệt Option B (Standalone) ngày 01/04/2026. BRD này là cụ thể hóa của phương án đó.
+Khía cạnh	Option A – Integrated (bị loại)	Option B – Standalone (chọn)
+Kiến trúc	Chung Next.js + PostgreSQL, schema qaqc.*	FastAPI + PostgreSQL riêng, Port 8767
+Tích hợp	Join DB trực tiếp, ORM chung	Tích hợp nhẹ: SSO + file sync + outbound webhook
+Deploy	Chung pipeline với ERP	Pipeline riêng, release độc lập
+Team	Chung team dev với ERP	Có thể có team dev QAQC chuyên biệt
+Rủi ro	Coupling chặt; phải phối hợp deploy	Cần chiến lược đồng bộ dữ liệu rõ
+Trạng thái	Đã loại 01/04/2026	ĐÃ CHỌN – bản BRD này làm theo
+C.2 Sơ đồ thành phần (Component Map)
+QA/QC Platform được chia thành 6 nhóm thành phần. BRD này không quy định framework cụ thể cho từng thành phần; dev team được tự do chọn theo ràng buộc ở mục H (NFR), nhưng tuân thủ ranh giới thành phần.
+Nhóm	Thành phần	Chức năng chính
+Presentation Layer	Web App (QC Desktop, Engineer, Manager) Mobile App (Inspection – Phase 4) Supplier Portal (Phase 4)	Giao diện; responsive cho tablet ≥ 10"; Vietnamese/English; offline-tolerant
+Application Layer	API Gateway (Port 8767) 8 Module Service (ITP, INS, NCR, WLD, NDT, MIR, MDR, CAL) Standards Service RFI Service Notification Service	REST/JSON; RBAC; audit trail; idempotent; rate limit
+AI Services	AI-1 Standards Lookup AI-2 MTC Cross-Check AI-3 Certificate OCR AI-4 BOM Matching AI-5 Photo Analysis AI-6 Weld Map AI-7 Trend Analysis	Worker async; confidence score; logging; mô hình self-hosted nơi khả thi
+Data Layer	PostgreSQL (qaqc schema) Redis cache Object storage (MinIO/S3) Search index (OpenSearch/Typesense) Vector DB cho RAG (Phase 2)	Sao lưu hàng ngày; vector hoá cho AI Lookup; full-text search
+Integration Layer	SSO Adapter (IBS ERP) File Sync Adapter Outbound Webhook Service Telegram Bot Adapter NAS Sync Worker	Tích hợp nhẹ; retry/backoff; dead-letter queue
+Observability & Ops	Logs / Metrics / Tracing Backup & Restore Billing AI usage (nếu dùng cloud)	SLO-driven; cảnh báo OpsGenie hoặc tương đương
+C.3 Song hành với IBS ERP – Tích hợp nhẹ
+Đây là nguyên tắc cốt lõi. QAQC chỉ thực hiện các tích hợp sau đây với IBS ERP; mọi nhu cầu tích hợp mới phải qua Change Request và được Chairman/GD Toan phê duyệt.
+C.3.1 Tích hợp bắt buộc (must-have Phase 1)
+ID	Tích hợp	Hướng	Cơ chế	Tần suất
+INT-01	SSO / User Sync	ERP → QAQC	OAuth2 / JWT; user profile API của ERP (read)	Realtime khi login; full sync nightly
+INT-02	File Attachment Sync	Bi-directional (dạng đọc)	QAQC mount object storage của ERP read-only; khi cần clone file vào QAQC namespace	On-demand + nightly scan
+INT-03	Project Code snapshot	ERP → QAQC	Nightly cron gọi API /projects list	Nightly
+INT-04	Outbound webhook NCR/MIR	QAQC → ERP	HTTP POST event (signed HMAC)	Khi trạng thái thay đổi
+C.3.2 Tích hợp KHÔNG làm (để giữ nguyên tắc Light Integration)
+    • Không tham gia vào workflow-engine.ts của ERP (không gate P1.1 → P6.5).
+    • Không chia sẻ bảng Prisma/Postgres với ERP.
+    • Không call DB trực tiếp sang ERP; mọi trao đổi qua API.
+    • Không đọc/ghi Redis cache của ERP.
+    • Không đăng ký làm consumer cho cron của ERP.
+C.3.3 Contract giữa hệ thống
+Các API contract (versioned) được định nghĩa tại /api/v1/... ; QAQC duy trì backward compatibility tối thiểu 1 năm; ERP cam kết SLA endpoint 99.5%.
+C.4 Tech Stack & Nguyên tắc triển khai
+Hạng mục	Khuyến nghị	Ghi chú
+Backend Framework	FastAPI (Python 3.12+)	Theo Spec v2 của GD Toan; đồng bộ với kho kiến thức AI Python
+Frontend Framework	React 18 + TypeScript + Vite	Không bắt buộc Next.js để giữ độc lập với ERP
+UI Library	Tailwind + shadcn/ui (hoặc tương đương); theme IBS HI
+Database	PostgreSQL 15+	Chạy trên cùng instance ERP nếu hạ tầng cho phép, nhưng schema riêng
+Cache	Redis 7	Riêng instance với ERP để tránh eviction lẫn nhau
+Object Storage	MinIO / AWS S3-compatible	Lưu evidence, ảnh, PDF OCR
+Search	OpenSearch hoặc Typesense	Fulltext + facet cho Standards, MTC
+Vector DB (Phase 2)	pgvector / Qdrant / Weaviate	Dùng cho AI-1 RAG
+Messaging queue	RabbitMQ / Redis Streams	Worker AI async
+Auth	JWT + RS256; refresh token rotation	Khớp với IBS ERP để SSO xuyên suốt
+Logging / Observability	OpenTelemetry + Loki/Elastic + Grafana	Khuyến nghị tái dùng stack của ERP nếu có
+Container & Deploy	Docker + Docker Compose (on-prem); K8s (tương lai)	Port public 8767
+CI/CD	GitHub Actions / GitLab CI	Pipeline độc lập với ERP
+Ngôn ngữ UI	Tiếng Việt (default), English	i18n framework
+Ghi chú: Các đề xuất công cụ cụ thể là khuyến nghị. Dev team có thể chọn khác nếu đáp ứng được NFR (mục H).
+C.5 Môi trường & Deployment
+Môi trường	Mục đích	Đặc tính	Dữ liệu
+DEV	Dev hàng ngày	Chạy Docker local, reset thoải mái	Seed data giả lập, không PII thật
+TEST / QA	QC/SIT	On-prem staging, refresh nightly từ prod sanitized	Sanitized data (PII obfuscated)
+UAT	Nghiệm thu với GD Toan, QC, Stakeholder	Gần giống Prod, khác DB	Copy prod snapshot có kiểm soát
+PROD	Khai thác thật	High availability; backup daily; audit log	Dữ liệu sản xuất thật
+Port 8767 dành cho PROD. DEV/TEST/UAT dùng port khác (8768, 8769, 8770) nhưng chung mẫu routing. Domain gợi ý: qaqc.ibs.vn (PROD), qaqc-uat.ibs.vn.
+C.6 Chiến lược đồng bộ NAS
+NAS (ibshi.synology.me:5000) là nguồn dữ liệu tiêu chuẩn & MDR lịch sử. QAQC không trực tiếp ghi vào NAS. Quy tắc:
+    • Mount NAS read-only (SMB/NFS) từ QAQC worker.
+    • Worker "NAS Sync" chạy nightly: quét cây thư mục, đối chiếu checksum, đẩy file mới / đổi lên Object Storage QAQC.
+    • Metadata được tạo theo naming convention mới (mục F.4), lưu vào bảng Standard, MaterialCert, MDRDocument.
+    • Giữ lại đường dẫn NAS gốc để audit truy vết nguồn.
+    • Cảnh báo nếu file bị xoá / đổi tên trên NAS không qua QAQC.
+Phần D – Yêu cầu chức năng chi tiết theo module
+Phần D mô tả chi tiết 8 module nghiệp vụ (M1-M8) theo Spec v2 của GD Toan, cộng thêm Standards Knowledge Base (KB) và RFI 2 chiều. Mỗi module được trình bày theo cấu trúc thống nhất: Mục đích – Actor – User Story – Business Rule – Workflow – Màn hình – Dữ liệu – Tiêu chí chấp nhận – Ma trận quyền – Phase.
+Quy ước ID: USxx.yy (User Story), BRxx.yy (Business Rule), ACxx.yy (Acceptance Criterion), Mxx (Module). "Ưu tiên" dùng MoSCoW: M (Must), S (Should), C (Could), W (Won't in this release).
+D.1 M1 – ITP Management (Inspection & Test Plan)
+Mục đích: Quản lý toàn bộ các Kế hoạch Kiểm tra và Thử nghiệm theo từng loại dự án (BE, VPI, Module Turbine, Tank, Duct…) và theo từng tiêu chuẩn khách hàng. ITP là nguồn sự thật chi phối việc kiểm tra ở IP01-IP10.
+Actor chính: QC Manager (tạo/duyệt), QC Director (duyệt mức cao), QC Inspector (tham chiếu), PM (đồng duyệt).
+Phase: Phase 1 (ITP cơ bản + multi-template), nâng cao ở Phase 2 (AI gợi ý checkpoint).
+D.1.1 User Stories chính
+ID	As a …	I want to …	So that …	Ưu tiên
+US01.01	QC Manager	Tạo mới ITP bằng cách chọn template theo loại dự án	Tiết kiệm thời gian, đảm bảo không sót IP	M
+US01.02	QC Manager	Định nghĩa từng ITP Item gắn với IP01-IP10 và tiêu chuẩn	Có liên kết trực tiếp với Standards KB	M
+US01.03	QC Manager	Đánh dấu Hold Point / Witness Point cho từng Item	Điều phối khách hàng / nội bộ	M
+US01.04	QC Director	Duyệt ITP 2 cấp (Draft → Manager Approved → Director Approved)	Kiểm soát chất lượng kế hoạch	M
+US01.05	QC Inspector	Xem ITP đang Active cho dự án mình phụ trách	Biết rõ phải kiểm tra gì	M
+US01.06	PM	Theo dõi tiến độ ITP Item theo IP	Biết dự án có bị chặn chất lượng không	M
+US01.07	QC Manager	Sao chép ITP giữa các dự án tương tự	Rút ngắn setup	S
+US01.08	System Admin	Cấu hình Template ITP theo loại dự án	Chuẩn hóa	M
+US01.09	AI Assistant	Đề xuất checkpoint còn thiếu dựa trên tiêu chuẩn đã chọn	Giảm sót điểm kiểm tra	S (Phase 2)
+D.1.2 Business Rules
+    • BR01.01 – Một dự án có thể có nhiều ITP (theo pha, theo loại sản phẩm) nhưng tại một thời điểm chỉ có tối đa 1 ITP Active cho mỗi cặp (Project, ProductType).
+    • BR01.02 – ITP phải có tối thiểu 1 Item cho mỗi IP được áp dụng; bỏ IP phải có ghi chú lý do.
+    • BR01.03 – Hold Point không được thực hiện bước tiếp theo nếu chưa có signoff; Witness Point chỉ cần thông báo 72h trước.
+    • BR01.04 – Mỗi ITP Item phải tham chiếu tới ít nhất 1 Standard trong Standards KB; không chấp nhận chuỗi tự do.
+    • BR01.05 – ITP phải có version; phiên bản mới phải nêu lý do thay đổi; phiên bản cũ giữ read-only cho audit.
+    • BR01.06 – Chỉ QC-MGR mới Draft ITP; chỉ QC-DIR mới duyệt cuối nếu dự án có giá trị > 5 triệu USD.
+    • BR01.07 – Khi ITP Active thay đổi, Platform thông báo tới QC Inspector phụ trách và gửi Telegram group.
+D.1.3 Workflow ITP
+Bước	Trạng thái	Hành động	Người thực hiện	Bắt buộc
+1	DRAFT	Khởi tạo từ Template / Copy; chỉnh sửa Item	QC Manager	Yes
+2	UNDER_REVIEW	Gửi review nội bộ; đính kèm rationale	QC Manager	Yes
+3	MANAGER_APPROVED	Duyệt cấp Manager	QC Manager khác (peer)	Yes
+4	DIRECTOR_APPROVED	Duyệt cấp Director (nếu BR01.06)	QC Director	Có điều kiện
+5	ACTIVE	Kích hoạt dùng cho Inspection	System	Tự động
+6	SUPERSEDED	Có version mới thay thế	System	Tự động
+7	ARCHIVED	Dự án hoàn tất, chuyển read-only	System	Tự động
+D.1.4 Màn hình chính
+    • S1.1 ITP List – Danh sách ITP theo dự án, filter theo trạng thái, version.
+    • S1.2 ITP Detail – Tab Overview / Items / Standards linked / History / Approvals.
+    • S1.3 ITP Editor – Drag-and-drop item, gán IP, gán Standard, đánh dấu Hold/Witness.
+    • S1.4 ITP Template Manager (Admin) – Template theo loại dự án.
+D.1.5 Dữ liệu chính (E-R tóm tắt)
+    • InspectionPlan (id, projectId, productType, version, status, createdBy, approvedBy, activeFrom, activeTo).
+    • ITPItem (id, planId, seq, ipCode (IP01-IP10), description, standardId, holdFlag, witnessFlag, acceptanceCriteria, sampleRule).
+    • ITPCheckpoint (id, itemId, checkpointLabel, required, dataType).
+    • InspectionPlanHistory (audit).
+D.1.6 Acceptance Criteria trọng yếu
+    • AC01.01 – Thời gian sao chép ITP từ một dự án cũ sang mới ≤ 30s.
+    • AC01.02 – Hệ thống khoá không cho deploy ITP Active mà thiếu reference tới Standards KB.
+    • AC01.03 – Mọi thay đổi ITP Active đều có audit trail (ai/khi/nội dung) và notify được.
+D.2 M2 – Inspection Execution (IP01-IP10)
+Mục đích: Thực thi 10 điểm kiểm tra (IP01-IP10) gắn với Fab Pipeline. Đây là module "mặt trước" cho QC Inspector, thu thập bằng chứng (photo, chữ ký), ghi nhận PASS/FAIL/HOLD.
+Actor chính: QC Inspector (chính), QC Manager (giám sát).
+Phase: Phase 1 cho IP01-IP07; Phase 2 cho IP08-IP10 và mobile offline.
+D.2.1 Mapping IP với Fab Pipeline
+IP	Fab Step	Inspection Type	Standard áp dụng	NAS Evidence folder
+IP01	Pre-Fab	Material Receiving (MIR)	ASTM/JIS material specs	1. Material folder
+IP02	CUT	Cutting Inspection	ISO 9013	Cutting, U1-XCUT
+IP03	FIT	Fit-up Inspection	AWS D1.1	Inspection plan
+IP04	WLD	Visual Weld Inspection	AWS D1.1 Table 6.1	Weld map
+IP05	WLD	NDT Inspection	ASME V	NDE Request
+IP06	MCH	Machining / Dimension Check	ISO 13920	Unit reports
+IP07	TRF / FAT	Factory Acceptance Test	Project spec	CAV form
+IP08	BLS	Blasting & Painting	SSPC-PA2, NACE	Paint work standards
+IP09	INS	Insulation Inspection	EN-017	5. Insulation
+IP10	PCK / RTS	Final / Packing Inspection	Project spec	6. Packing
+D.2.2 User Stories chính
+ID	As a	Want to	So that	Ưu tiên
+US02.01	QC Inspector	Xem danh sách công việc theo ngày/tuần	Biết phải làm gì, ở đâu	M
+US02.02	QC Inspector	Mở checklist theo IP và ghi PASS/FAIL/HOLD từng mục	Chuẩn hoá ghi nhận	M
+US02.03	QC Inspector	Chụp ảnh đính kèm cho từng checkpoint	Có bằng chứng hình ảnh	M
+US02.04	QC Inspector	Ký số (PIN + biometric) để xác thực kết quả	Non-repudiation	M
+US02.05	QC Inspector	Làm việc offline 2h khi mạng xưởng mất	Không gián đoạn	M (Phase 4 nâng cao)
+US02.06	QC Manager	Giám sát bảng trạng thái IP theo project/unit	Can thiệp sớm	M
+US02.07	QC Inspector	Tạo NCR draft khi kết quả FAIL	FAIL không tự động chuyển NCR theo quyết định Toan	M
+US02.08	QC Inspector	Đính kèm drawing revision liên quan	Truy vết phiên bản DWG	S
+D.2.3 Business Rules
+    • BR02.01 – FAIL KHÔNG tự động tạo NCR (quyết định GD Toan); QC phải bấm "Escalate to NCR" có lý do.
+    • BR02.02 – Một Inspection chỉ được coi là hoàn tất khi tất cả checkpoint đã có kết quả và chữ ký.
+    • BR02.03 – Inspection không thể lùi về trạng thái trước (append-only audit); sửa lỗi bằng Inspection Revision mới.
+    • BR02.04 – Hold Point: Platform tạo cờ chặn bước tiếp theo cho tới khi được duyệt.
+    • BR02.05 – Mỗi ảnh đính kèm có geotag (nếu có) và timestamp, không thể sửa.
+    • BR02.06 – Inspection cho IP05 (NDT) bắt buộc có NDT Request và NDT Result (module M5).
+    • BR02.07 – Chỉ QC được gán IP-quyền tương ứng mới Inspection được IP đó (ví dụ Welding Inspector mới ký IP04).
+    • BR02.08 – Chỉ cho phép đồng bộ kết quả từ thiết bị offline nếu app local còn trong SLA 24h; quá thì từ chối và yêu cầu inspection mới.
+D.2.4 Màn hình chính
+    • S2.1 My Tasks – Danh sách Inspection hôm nay, sort theo SLA.
+    • S2.2 Inspection Form – Checklist dựa trên ITP Item, gán IP, nhập kết quả, đính kèm ảnh.
+    • S2.3 IP Dashboard – Heatmap IP × Project × Unit, màu PASS/FAIL/HOLD.
+    • S2.4 Mobile Offline App – Form đơn giản hoá, queue khi mất mạng.
+    • S2.5 IP Detail (QC Manager) – Drill-down để xem ảnh, chữ ký, audit.
+D.2.5 Acceptance Criteria trọng yếu
+    • AC02.01 – Một inspection trung bình có 10 checkpoint, QC Inspector hoàn thành trên tablet < 3 phút.
+    • AC02.02 – Offline queue đồng bộ lại trong ≤ 30s sau khi có mạng.
+    • AC02.03 – 100% inspection PASS/FAIL đều có chữ ký số (không chấp nhận ghi kết quả mà không ký).
+    • AC02.04 – Hold Point đang mở hiển thị cho PM/PO trong vòng 10s sau khi được đánh dấu.
+D.3 M3 – NCR Management
+Mục đích: Quản lý vòng đời Non-Conformance Report: phát hiện → phân loại → root cause → CAPA → đóng. Tách rời khỏi Inspection để kiểm soát chủ động.
+Actor: QC Inspector (tạo), QC Manager (duyệt), QC Director (duyệt nghiêm trọng), PM, Production Manager.
+Phase: Phase 2.
+D.3.1 User Stories chính
+ID	As a	Want to	So that	Ưu tiên
+US03.01	QC Inspector	Tạo NCR mới gắn với Inspection hoặc đứng độc lập	Ghi nhận chuẩn	M
+US03.02	QC Manager	Phân loại NCR (Minor/Major/Critical) và phân công xử lý	Ưu tiên đúng	M
+US03.03	PM / Prod Manager	Đề xuất Containment, Root Cause, Corrective, Preventive	Giải quyết gốc rễ	M
+US03.04	QC Director	Duyệt NCR Critical và phương án CAPA	Kiểm soát rủi ro	M
+US03.05	Any role	Xem timeline NCR và SLA đang trôi	Minh bạch	M
+US03.06	AI (Phase 3)	Đề xuất Root Cause dựa trên lịch sử NCR tương tự	Tiết kiệm thời gian	C
+D.3.2 Business Rules
+    • BR03.01 – NCR Minor SLA đóng ≤ 7 ngày; Major ≤ 14; Critical ≤ 30; quá hạn hiển thị đỏ và notify Director.
+    • BR03.02 – NCR phải có ít nhất: (i) mô tả hiện trạng, (ii) ảnh/evidence, (iii) tiêu chuẩn bị vi phạm, (iv) root cause, (v) CAPA.
+    • BR03.03 – Không được đóng NCR nếu CAPA chưa có verification evidence (ảnh / kết quả lại).
+    • BR03.04 – Tỷ lệ NCR lặp lại (cùng root cause) > 3 lần / 6 tháng phải gắn Preventive plan và review hàng quý.
+    • BR03.05 – Chỉ QC-DIR hoặc người được uỷ quyền mới đóng NCR Critical.
+D.3.3 Workflow NCR (7 bước)
+Bước	Trạng thái	Mô tả	Người thực hiện
+1	REPORTED	Phát hiện và tạo NCR draft	QC Inspector
+2	TRIAGED	Phân loại Minor/Major/Critical; gán owner	QC Manager
+3	CONTAINMENT	Biện pháp tạm thời cô lập rủi ro	Owner (PM/Prod)
+4	ROOT_CAUSE	Phân tích nguyên nhân gốc (5 Why / Fishbone)	Owner
+5	CAPA_PLAN	Lập CAPA và thời hạn	Owner + QC Manager
+6	CAPA_VERIFY	Thực thi và xác minh hiệu quả	QC Inspector
+7	CLOSED	Đóng NCR, evidence đầy đủ	QC Manager / Director
+D.3.4 Acceptance Criteria
+    • AC03.01 – NCR có dashboard Age (thời gian trôi) và SLA color (xanh/vàng/đỏ).
+    • AC03.02 – NCR đóng phải có ít nhất 1 evidence gắn CAPA Verify.
+    • AC03.03 – Xuất báo cáo NCR theo supplier / theo IP / theo dự án / theo tháng.
+D.4 M4 – Welding Management
+Mục đích: Quản lý WPS/PQR, Welder Qualification với continuity tracking, Weld Map. Là module chuyên sâu cho Welding Engineer và QC IP04/IP05.
+Actor: Welding Engineer (chính), QC Inspector (ký IP04), AI-6 (sinh weld map).
+Phase: Phase 2.
+D.4.1 User Stories
+ID	As a	Want to	So that	Ưu tiên
+US04.01	Welding Engineer	Tạo WPS/PQR với các tham số hàn	Chuẩn hóa procedure	M
+US04.02	Welding Engineer	Cấp Welder Qualification cho thợ kèm continuity tracking	Đảm bảo hiệu lực	M
+US04.03	Welding Engineer	Sinh Weld Map từ bản vẽ (AI-6) và chỉnh sửa	Giảm thủ công	S (Phase 3)
+US04.04	QC Inspector	Ký IP04 / IP05 với tham chiếu WPS và Welder	Truy vết đầy đủ	M
+US04.05	System	Cảnh báo thợ hàn sắp hết continuity (6 tháng)	Tránh dùng thợ hết hạn	M
+D.4.2 Business Rules
+    • BR04.01 – Welder Qualification có thời hạn continuity 6 tháng kể từ lần hàn gần nhất; Platform cảnh báo trước 30 ngày.
+    • BR04.02 – Không cho phép gán thợ hết hạn vào một weld task; yêu cầu requalification.
+    • BR04.03 – Mỗi mối hàn trên Weld Map có tham chiếu WPS và Welder cụ thể.
+    • BR04.04 – WPS/PQR thay đổi phải bump version; version cũ giữ lại cho audit.
+    • BR04.05 – Weld Map được AI-6 sinh phải được Welding Engineer xác nhận thủ công (BR Responsible AI).
+D.4.3 Acceptance Criteria
+    • AC04.01 – Màn hình Welder Overview liệt kê toàn bộ thợ với continuity color-code (green/yellow/red).
+    • AC04.02 – Xuất Weld Map theo định dạng PDF, có legend WPS / Welder / NDT status.
+D.5 M5 – NDT Management
+Mục đích: Quản lý NDT Request, kết quả RT/UT/MT/PT, phân công NDT Vendor bên ngoài, kết nối với IP05.
+Actor: NDT Coordinator (nội bộ), NDT Vendor (ngoài), QC Inspector.
+Phase: Phase 2.
+D.5.1 User Stories
+ID	As a	Want to	So that	Ưu tiên
+US05.01	NDT Coordinator	Tạo NDT Request gắn với unit / weld	Điều phối vendor	M
+US05.02	NDT Coordinator	Phân công vendor và gửi token truy cập	Bảo mật	M
+US05.03	NDT Vendor	Upload report và hình ảnh kết quả	Hoàn tất công việc	M
+US05.04	QC Inspector	Xem kết quả NDT và ký IP05	Kết thúc step	M
+US05.05	QC Manager	Đánh giá hiệu suất NDT Vendor	Tối ưu vendor	S
+D.5.2 Business Rules
+    • BR05.01 – Vendor chỉ thấy RFI/Request được phân công, không thấy dự án khác.
+    • BR05.02 – Kết quả NDT FAIL bắt buộc tạo NCR (manual).
+    • BR05.03 – Ảnh NDT phải có metadata loại test (RT/UT/MT/PT), thiết bị, calibration reference.
+    • BR05.04 – Vendor token có hạn theo dự án và revoke được bất kỳ lúc nào.
+D.6 M6 – Material Receiving Inspection (MIR)
+Mục đích: Quản lý vòng đời vật tư từ khi được PO đến khi nhập kho chính thức, với nguyên tắc QUARANTINE: không vào stock nếu chưa ACCEPTED.
+Actor: Commercial (Pre-Arrival, Document Check), QC (Physical, MTC Verification, Decision), Warehouse (Warehouse Entry).
+Phase: Phase 1 (toàn bộ 6 stage + AI-2).
+D.6.1 6-stage Workflow
+#	Stage	Bộ phận	Hành động chính	Output
+1	Pre-Arrival	Commercial	PR/PO prep; notify supplier; tạo MIRRecord expected	MIR Record = EXPECTED
+2	Document Check	Commercial	Thu thập MTC, đối chiếu PO, gán vào MIR	MIR Record = DOC_RECEIVED
+3	Physical Inspection	QC	Visual check, dimension, sampling theo ITP	Inspection PASS/FAIL
+4	MTC Verification	QC + AI-2	AI-2 đối chiếu MTC với Standards; QC xác nhận	MIR Record = MTC_VERIFIED
+5	Decision	QC Manager	ACCEPT / CONDITIONAL / REJECT	Outbound webhook → ERP
+6	Warehouse Entry	Warehouse	Label, locate, update inventory snapshot	MIR Record = INSTOCK
+D.6.2 User Stories
+ID	As a	Want to	So that	Ưu tiên
+US06.01	Commercial	Đăng ký MIR expected ngay khi PO confirm	Chủ động chuẩn bị	M
+US06.02	Commercial	Upload MTC và gán vào MIR	Không lạc tài liệu	M
+US06.03	QC Inspector	Thực hiện Physical Inspection theo checklist	Chuẩn hóa	M
+US06.04	QC Engineer + AI-2	Đối chiếu MTC tự động với Standard	Giảm thủ công	M
+US06.05	QC Manager	Ký MIR Decision ACCEPT/CONDITIONAL/REJECT	Quyết định vào kho	M
+US06.06	Warehouse	Nhận vật tư và đóng MIR	Vào kho chính thức	M
+US06.07	Auditor	Truy vết lịch sử MIR cho 1 lô vật tư đã 2 năm	Audit	M
+D.6.3 Business Rules
+    • BR06.01 – Nguyên tắc Quarantine: vật tư không được hiển thị trong stock chính thức của ERP nếu MIR chưa ACCEPTED/CONDITIONAL.
+    • BR06.02 – MIR chỉ được ACCEPT nếu tất cả checkpoint Physical PASS và MTC Verification PASS (hoặc CONDITIONAL với waiver có QC-MGR ký).
+    • BR06.03 – REJECT sinh outbound webhook tới ERP để flag PO và khởi tạo NCR (manual).
+    • BR06.04 – Một MIR có thể cover nhiều batch và nhiều PO line, nhưng mỗi line chỉ nằm trong tối đa 1 MIR ACCEPTED.
+    • BR06.05 – MTC phải gắn được tối thiểu 1 Standard; không chấp nhận MTC tự do text.
+    • BR06.06 – QC-DIR hoặc QC-MGR được uỷ quyền mới duyệt CONDITIONAL (chấp nhận có điều kiện).
+    • BR06.07 – Với lô vật tư Whyalla/AS-NZS, bắt buộc standard AS/NZS được tham chiếu (BR khoá Phase 1).
+D.6.4 Acceptance Criteria
+    • AC06.01 – AI-2 trả kết quả đối chiếu MTC trong ≤ 60s/MTC với confidence score.
+    • AC06.02 – MIR Decision được ký số có timestamp bất khả kháng, lưu tới bảng AuditLog.
+    • AC06.03 – Outbound webhook MIR tới ERP có retry 5 lần / exponential backoff; cảnh báo Ops nếu fail 5 lần.
+    • AC06.04 – Filter MIR theo supplier, PO, date, standard; export Excel.
+D.7 M7 – MDR Builder (Manufacturing Data Report)
+Mục đích: Tự động tổng hợp 16 category tài liệu cho MDR cuối dự án; sinh PDF có index/bookmark; tracking completeness.
+Actor: MDR Compiler (chính), QC Director (ký MDR cuối), PM.
+Phase: Phase 3.
+D.7.1 16 Category MDR
+16 category được xác định từ folder structure thực tế của IP080_BRADEN (Whyalla): Material Certificates, Traceability, Cutting Reports, Inspection Plans, NDT, Welder Certificates, CAV Forms, Weld Maps, Unit Reports, Insulation, Packing, MDR Index, Packages, v.v. (mục 3.4 tài liệu nguồn).
+D.7.2 User Stories
+ID	As a	Want to	So that	Ưu tiên
+US07.01	MDR Compiler	Tạo MDR skeleton từ template theo khách hàng	Chuẩn hóa	M
+US07.02	System	Tự động scan 16 category và đánh dấu completeness	Biết thiếu gì	M
+US07.03	MDR Compiler	Upload file bổ sung thủ công khi cần	Hỗ trợ linh hoạt	M
+US07.04	System	Sinh PDF MDR có bookmark & index tự động	Bàn giao khách hàng	M
+US07.05	QC Director	Ký MDR và đóng dự án	Hoàn tất	M
+US07.06	Customer	Nhận link MDR xem online (read-only, có expire)	Tiện cho khách	S (Phase 4)
+D.7.3 Business Rules
+    • BR07.01 – MDR không được sign nếu completeness < 100% hoặc có NCR Critical chưa đóng.
+    • BR07.02 – Mỗi file MDR có tham chiếu ngược (backlink) tới record gốc (Inspection, NCR, MTC, NDT...) để audit truy vết.
+    • BR07.03 – PDF MDR cuối cùng có watermark "IBS HI – <Project> – <Version>" và hash chống giả mạo.
+D.8 M8 – Calibration (Annual Master List)
+Mục đích: Theo dõi thiết bị đo cần calibration theo hướng Master List hàng năm (quyết định GD Toan), thay vì per-instrument real-time.
+Actor: QC Manager, Equipment Keeper.
+Phase: Phase 3.
+D.8.1 User Stories
+ID	As a	Want to	So that	Ưu tiên
+US08.01	QC Manager	Quản lý Master List thiết bị cần calibration hàng năm	Có kế hoạch	M
+US08.02	System	Cảnh báo thiết bị sắp hết hiệu lực 30 ngày	Chủ động	M
+US08.03	QC Manager	Ghi nhận CalibrationRecord khi hoàn tất calibration	Lưu lịch sử	M
+US08.04	QC Inspector	Tham chiếu calibration reference khi ký Inspection	Không dùng thiết bị quá hạn	M
+D.8.2 Business Rules
+    • BR08.01 – Inspection có số đo kích thước/NDT phải chỉ đích thiết bị đang trong hiệu lực calibration.
+    • BR08.02 – Platform block chọn thiết bị đã hết hạn trong form Inspection.
+    • BR08.03 – Master List refresh mỗi đầu năm; thiết bị mua mới trong năm được thêm vào và đánh dấu prorated.
+D.9 Standards Knowledge Base (KB)
+Mục đích: Cơ sở dữ liệu tiêu chuẩn tập trung, có index, OCR, metadata, tra cứu AI. Nguồn sự thật duy nhất (single source of truth) cho mọi module.
+Actor: System Admin (quản lý nội dung), mọi người dùng (tra cứu), AI-1 (RAG nguồn).
+Phase: Phase 1 (13 nhóm, 387+ PDF index + OCR + AI-1).
+D.9.1 Cấu trúc 3 tầng
+Tier	Mô tả	Nhóm tiêu chuẩn
+Tier 1	Material Standards	API, ASME, ASTM, AWS, DIN, EN, JIS
+Tier 2	Process / Design Standards	ANSI & AISC, API (L2), ASME (L2), ASTM (L2), AWS (L2), ISO, TCVN, NACE Code
+Tier 3	Application Standards	Paint work, Pipe work
+D.9.2 User Stories
+ID	As a	Want to	So that	Ưu tiên
+US09.01	QC Inspector	Tìm tiêu chuẩn theo Grade (A36) hoặc từ khoá ("hardness")	Tra nhanh tại xưởng	M
+US09.02	QC Inspector	So sánh 2-3 Grade giữa các tiêu chuẩn	Xác minh tương đương	M
+US09.03	QC Inspector	Xem bảng tương đương (equivalents cross-reference)	Tương thích quốc tế	M
+US09.04	AI-1	Trả lời câu hỏi tự nhiên về tiêu chuẩn	Giảm thời gian	M
+US09.05	System Admin	Upload tiêu chuẩn mới, metadata, version	Cập nhật KB	M
+US09.06	System	Phát hiện tiêu chuẩn đã outdated	Cảnh báo refresh	S
+US09.07	Auditor	Xuất danh sách tiêu chuẩn dùng cho dự án X với phiên bản	Audit	M
+D.9.3 Business Rules
+    • BR09.01 – Mỗi tiêu chuẩn có: code, title, version, issued_date, status (active/deprecated), tier, group, scope, file_url, indexed_text, metadata.
+    • BR09.02 – Không cho xoá cứng tiêu chuẩn; chỉ deprecate; các module tham chiếu lịch sử vẫn hoạt động.
+    • BR09.03 – Khi tiêu chuẩn deprecated, AI-1 phải ưu tiên version mới nhất và cảnh báo người dùng.
+    • BR09.04 – Mỗi truy vấn AI-1 trả về kèm "chứng cứ" (trích đoạn + số trang).
+    • BR09.05 – KB giao diện phải hiển thị 3 cụm: Material / Process / Application; filter theo tier.
+D.9.4 Acceptance Criteria
+    • AC09.01 – Tra cứu trả kết quả đầu tiên trong ≤ 500ms với DB đã index.
+    • AC09.02 – AI-1 trả kết quả có citation trong ≤ 5s.
+    • AC09.03 – Tỷ lệ truy vấn có ít nhất 1 kết quả ≥ 95% trên tập test 200 câu hỏi QC thực.
+D.10 RFI 2 chiều (Internal + External)
+Mục đích: Thay thế email qua lại để hỏi - đáp về chất lượng (nội bộ) hoặc với khách hàng / supplier / NDT Vendor (external).
+Phase: Phase 2 (internal), Phase 4 (external).
+D.10.1 User Stories
+ID	As a	Want to	So that	Ưu tiên
+US10.01	Any role	Tạo RFI gắn với Inspection / NCR / MTC	Hỏi có ngữ cảnh	M
+US10.02	Any role	Gán RFI cho người / nhóm và đặt SLA	Rõ ràng trách nhiệm	M
+US10.03	External (Customer/Supplier)	Trả RFI qua portal	Không cần VPN	M (Phase 4)
+US10.04	QC Manager	Đóng RFI khi có câu trả lời	Kết thúc vòng	M
+D.10.2 Business Rules
+    • BR10.01 – Mỗi RFI phải có chủ đề, ngữ cảnh (link tới record), deadline.
+    • BR10.02 – External RFI dùng token link có hạn; không cần account ERP.
+    • BR10.03 – Trả lời RFI tự động thông báo tới requester + owner dự án.
+D.11 Ma trận quyền chi tiết theo module (tóm tắt)
+Ma trận dưới đây là view tóm tắt. Chi tiết action-level (create/update/delete/approve/sign) được quản trị trong System Admin module.
+Module	QC-DIR	QC-MGR	QC-INS	WLD-ENG	NDT-COR	NDT-VEN	MAT-REC	MDR-CMP	AUD	SYS-ADM
+M1 ITP	All	CRUD+Apr	Read	Read	Read	-	-	Read	R	Cfg
+M2 INS	Read+Apr	Read+Apr	Exec	Read	Read	-	-	Read	R	Cfg
+M3 NCR	All+Apr Crit	CRUD+Apr Maj	Create	Part	Part	-	Part	Read	R	Cfg
+M4 WLD	Read+Apr	Read	Read	CRUD	Read	-	-	Read	R	Cfg
+M5 NDT	Read+Apr	Read	Read (IP05)	Read	CRUD	Own only	-	Read	R	Cfg
+M6 MIR	Read+Apr	CRUD+Apr	Exec Phys	-	-	-	Exec DC+WE	Read	R	Cfg
+M7 MDR	Sign	Read	Read	Read	-	-	-	Build+Submit	R	Cfg
+M8 CAL	Read	CRUD	Select only	Select only	Select only	-	-	Read	R	Cfg
+D.9 Standards	Read	Read	Read	Read	Read	Read	Read	Read	R	CRUD
+D.10 RFI	CRUD	CRUD	CRUD	CRUD	CRUD	Own only	CRUD	CRUD	R	Cfg
+Phần E – AI & Automation
+E.1 Nguyên tắc AI có trách nhiệm (Responsible AI)
+QAQC Platform coi AI là trợ lý chứ không phải người quyết định trong lĩnh vực chất lượng – vốn có hệ quả an toàn và pháp lý. Mọi AI model tuân thủ các nguyên tắc sau:
+    • Transparency – Mọi đầu ra AI kèm lý do và chứng cứ (đoạn trích tiêu chuẩn, giá trị so sánh).
+    • Confidence score – Mỗi đầu ra có điểm tin cậy 0.0-1.0. Ngưỡng mặc định 0.8 hiển thị "cần QC xác nhận".
+    • Human-in-the-loop – Quyết định chính thức (MIR decision, weld pass, NDT accept) bắt buộc có chữ ký số QC, AI chỉ khuyến nghị.
+    • Data governance – Dữ liệu train và prompt phải chứa IBS HI domain; không gửi dữ liệu khách hàng ra dịch vụ cloud chưa được duyệt.
+    • Auditability – Mỗi truy vấn AI được log (user, time, prompt, response, confidence); log giữ 3 năm.
+    • Fallback – Khi AI service down, hệ thống fallback về chế độ thủ công; không chặn workflow.
+    • Feedback loop – QC có thể đánh dấu đầu ra AI tốt/xấu; dùng để tinh chỉnh model.
+E.2 7 AI Models
+E.2.1 AI-1 Standards Lookup
+Mục đích: Cho phép truy vấn tự nhiên về nội dung tiêu chuẩn (RAG trên 387+ PDF).
+Input: Câu hỏi tiếng Việt/Anh + (tuỳ chọn) filter theo nhóm/tier.
+Output: Câu trả lời có citation (file + số trang); 3 đoạn trích liên quan; confidence.
+Phase: Phase 1 – P0.
+Ràng buộc: Không sinh lời khuyên ngoài phạm vi KB; khi không đủ ngữ cảnh phải trả lời "Không tìm thấy trong KB".
+E.2.2 AI-2 MTC Cross-Check
+Mục đích: Đối chiếu giá trị MTC (thành phần hóa học, cơ tính) với giới hạn tiêu chuẩn áp dụng.
+Input: MTC đã OCR / số liệu + Standard reference.
+Output: Bảng so sánh từng property: expected range vs actual, trạng thái PASS/FAIL/WARN, confidence.
+Phase: Phase 1 – P0.
+Ràng buộc: Nếu MTC có property không rõ đơn vị, AI phải báo chứ không đoán.
+E.2.3 AI-3 Certificate OCR
+Mục đích: Trích xuất dữ liệu cấu trúc từ MTC scan (PDF/ảnh).
+Input: File PDF/image.
+Output: JSON structured: supplier, heat_no, material_grade, chemical composition table, mechanical table.
+Phase: Phase 2 – P1.
+E.2.4 AI-4 BOM Matching
+Mục đích: Đối chiếu vật tư đã giao với BOM line dự án.
+Input: Danh sách MTC + BOM snapshot từ ERP.
+Output: Gợi ý ánh xạ 1-1, confidence và trạng thái (match/mismatch/partial).
+Phase: Phase 2 – P1.
+E.2.5 AI-5 Photo Analysis
+Mục đích: Phân tích ảnh inspection để gợi ý khuyết tật (scratch, rust, porosity, undercut).
+Input: Ảnh JPG/PNG + IP context.
+Output: Danh sách khuyết tật nghi ngờ với bounding box, confidence, gợi ý loại NCR.
+Phase: Phase 3 – P2.
+Ràng buộc: Chỉ là gợi ý; QC Inspector luôn đưa ra đánh giá cuối.
+E.2.6 AI-6 Weld Map Generator
+Mục đích: Sinh weld map từ bản vẽ.
+Input: Drawing PDF/DWG + WPS list.
+Output: Weld map có seq number, WPS gán; có thể chỉnh sửa.
+Phase: Phase 3 – P2.
+E.2.7 AI-7 Trend Analysis
+Mục đích: Phát hiện xu hướng NCR, supplier, IP bất thường.
+Input: Lịch sử NCR, MIR, Inspection.
+Output: Insight report hàng tháng: top 5 root cause, top 5 supplier issue, IP có tỷ lệ FAIL tăng.
+Phase: Phase 3 – P2.
+E.3 Tổng hợp độ ưu tiên & chỉ số thành công
+Model	Phase	Metric thành công	Ngưỡng tối thiểu
+AI-1	Phase 1	Precision@3, Recall@10 trên test set 200 câu hỏi QC	P@3 ≥ 0.8, R@10 ≥ 0.9
+AI-2	Phase 1	Accuracy so sánh property	≥ 95% khi MTC đã OCR đúng
+AI-3	Phase 2	Field-level F1 trên 100 MTC mẫu	≥ 0.85
+AI-4	Phase 2	Top-1 accuracy BOM match	≥ 0.9
+AI-5	Phase 3	Detection F1 khuyết tật 4 loại chính	≥ 0.7 (hỗ trợ thôi)
+AI-6	Phase 3	% weld node sinh đúng so với chuyên gia	≥ 0.8 + QC chỉnh sửa ≤ 10% node
+AI-7	Phase 3	Số insight/tuần được team xác nhận là hữu ích	≥ 3/tuần
+E.4 Automation không AI
+Các automation dưới đây không cần model ML nhưng tạo giá trị lớn:
+    • Auto-reminders: Calibration hết hạn, Welder continuity hết hạn, NCR gần SLA, ITP chưa duyệt.
+    • Auto-compile MDR: Scanning các bảng Inspection/NDT/MIR theo 16 category, tạo draft MDR.
+    • Auto NAS sync nightly: Import tiêu chuẩn / MTC mới.
+    • Auto supplier scorecard: Tính lại mỗi tuần dựa trên NCR + MIR.
+    • Auto Telegram notifications: MIR REJECT, NCR Critical, Hold Point.
+E.5 Hạ tầng AI & Mô hình tham chiếu
+BRD không ràng buộc mô hình cụ thể, nhưng khuyến nghị với dev team:
+    • RAG Stack: LangChain / LlamaIndex + pgvector; embedding model đa ngôn ngữ (BGE-M3 hoặc tương đương).
+    • LLM: Claude (qua Claude API) cho các tác vụ cần reasoning; mô hình open-source (Llama 3/Qwen) cho tra cứu đơn giản để tiết kiệm chi phí.
+    • OCR: Amazon Textract / Google Document AI cho MTC scan khó; EasyOCR/Tesseract cho file rõ.
+    • Vision: YOLOv9 hoặc tương đương, fine-tune trên tập ảnh khuyết tật IBS HI.
+    • Vector DB: pgvector (khớp với PostgreSQL của QAQC) là lựa chọn đơn giản, Qdrant nếu cần scale.
+Dev team đề xuất mô hình cụ thể trong SDR (System Design Review) sau khi BRD này được phê duyệt.
+Phần F – Dữ liệu & Schema
+F.1 Nguyên tắc thiết kế dữ liệu
+    • Single source of truth: Tiêu chuẩn và Calibration master list là nguồn duy nhất; các module khác chỉ tham chiếu ID.
+    • Append-only audit: Mọi thay đổi trên record quan trọng (Inspection, NCR, MIR, MDR) đều ghi vào bảng AuditLog không xóa.
+    • Versioning: ITP, WPS/PQR, Standards có version; version cũ giữ read-only.
+    • Soft-delete: Không xoá cứng, dùng status ARCHIVED/DEPRECATED.
+    • Traceability: Mỗi record có lineage reference về source (NAS path, ERP PO, etc.).
+    • Tách dữ liệu nóng / lạnh: Record đã đóng MDR > 2 năm chuyển sang bảng archive read-only để tối ưu hiệu năng.
+F.2 Tổng quan 28 bảng Spec v2
+Schema QAQC chia làm 8 nhóm logic. Tổng số bảng: 28 (không kể bảng phụ trợ AuditLog, User, Role, Token, Setting).
+Nhóm	Bảng chính	Số bảng	Phase
+ITP & Inspection	InspectionPlan, ITPItem, ITPCheckpoint, Inspection, InspectionResult, InspectionPhoto	6	P1
+NCR	NCR, NCRAction	2	P2
+Welding	WeldingProcedure, WelderQualification, WeldMap, WeldingStandard	4	P2-P3
+Material / MIR	MaterialCert, Acceptance, MIRRecord, SupplierQuality	4	P1
+Standards	Standard, StandardRequirement, ChemicalSpec, MechanicalSpec, DimensionalSpec	5	P1
+MDR	QualityDossier, MDRCategory, MDRDocument	3	P3
+Calibration	CalibrationMasterList, CalibrationRecord	2	P3
+Reference	InspectionStandard, RFIRecord	2	P1-P2
+F.3 Mô tả cốt lõi một số bảng chính
+Chi tiết đầy đủ các cột, type, khoá được trình bày trong Data Dictionary đi kèm (tài liệu riêng). Dưới đây là mô tả nghiệp vụ:
+Bảng	Mục đích	Liên kết chính
+InspectionPlan	Kế hoạch ITP theo project/productType/version	→ ITPItem, → Project(ref)
+ITPItem	Điểm kiểm tra đơn lẻ trong ITP, gắn IPxx + Standard	→ Standard, → ITPCheckpoint
+Inspection	Thực thể thực thi inspection một IP cụ thể	→ ITPItem, → InspectionResult, → InspectionPhoto, → NCR (optional)
+InspectionResult	Kết quả từng checkpoint (PASS/FAIL/HOLD + giá trị đo)	→ CalibrationMasterList (for device), → Inspection
+NCR	Báo cáo không phù hợp	→ Inspection (optional), → NCRAction*
+WeldingProcedure	WPS/PQR theo version	→ WeldMap, → Standard
+WelderQualification	Hồ sơ thợ hàn + continuity tracking	→ User, → WeldingProcedure
+MIRRecord	Vòng đời MIR 6 stage	→ MaterialCert, → Acceptance, → Project (ref), → PO (ref)
+MaterialCert	MTC đã số hoá/OCR	→ Standard, → ChemicalSpec, → MechanicalSpec
+Acceptance	Quyết định ACCEPT/CONDITIONAL/REJECT	→ MIRRecord
+SupplierQuality	Scorecard supplier	→ User (supplier), → MIRRecord*
+Standard	Metadata của tiêu chuẩn + file_url	→ StandardRequirement*, → ChemicalSpec*, → MechanicalSpec*
+QualityDossier	MDR một dự án	→ MDRCategory*, → MDRDocument*
+MDRDocument	File MDR + backlink record gốc	→ Inspection/MIR/NCR (polymorphic)
+CalibrationMasterList	Danh mục thiết bị cần calibration hàng năm	→ CalibrationRecord*
+RFIRecord	RFI 2 chiều	→ any entity (polymorphic)
+AuditLog	Log mọi thay đổi	→ any entity
+F.4 Naming convention mới cho file
+Một trong những vấn đề lớn nhất của NAS hiện tại là naming không chuẩn (348 folder MTC lẫn lộn). Platform áp dụng convention sau để đảm bảo AI training hiệu quả:
+    • MTC: MTC-{ProjectCode}-{POLineId}-{HeatNo}-v{Version}.pdf  (ví dụ: MTC-IP080-PO0123-H45678-v1.pdf)
+    • Inspection Photo: INS-{ProjectCode}-{IP}-{Unit}-{Timestamp}.jpg
+    • NCR: NCR-{ProjectCode}-{SeqYYYY}-{Severity}.pdf
+    • Standard: STD-{Group}-{Code}-{Version}.pdf  (ví dụ: STD-ASTM-A36-2024.pdf)
+    • MDR: MDR-{ProjectCode}-{Version}-{CategoryCode}.pdf
+    • WPS: WPS-{ProjectCode}-{SeqId}-v{Version}.pdf
+    • Weld Map: WM-{ProjectCode}-{Unit}-{SeqId}-v{Version}.pdf
+Tên hiển thị trên UI vẫn có thể là alias thân thiện; tên file vật lý và metadata DB phải tuân convention.
+F.5 Migration từ dữ liệu lịch sử
+Nguồn	Chiến lược	Phase
+NAS 04. STANDARDS (387+ PDF, 13 nhóm)	Script scan + OCR + metadata + import vào bảng Standard	Phase 1
+NAS 11 CHUNG CHI VAT TU (348 folder MTC)	Script scan + ánh xạ tên ↔ PO/ProjectCode; file nào không ánh xạ được tạo "orphan" và yêu cầu Commercial gán thủ công	Phase 1
+NAS 03. PROJECT (14 dự án, 41 sub-folder MDR)	Import vào QualityDossier theo project; giữ nguyên backlink NAS path	Phase 3
+Legacy ibshi1 SQLite (460 acceptance records)	Export SQL → transform → load PostgreSQL; giữ audit migration	Phase 2
+Excel Calibration hiện tại	Import CSV vào CalibrationMasterList đầu năm	Phase 3
+File WPS/PQR .doc/.docx rải rác	Upload thủ công có guided import; AI-3 hỗ trợ extract	Phase 2-3
+F.6 Policy lưu trữ
+    • Retention: Dữ liệu active giữ nguyên. Dự án đã giao > 2 năm chuyển archive read-only nhưng giữ vô thời hạn (yêu cầu audit ISO).
+    • Backup: Full backup hàng ngày; incremental mỗi 4h; test restore hàng quý.
+    • DR (Disaster Recovery): RPO ≤ 4h, RTO ≤ 8h (Phase 1); nâng lên RPO ≤ 1h, RTO ≤ 2h ở Phase 3.
+    • File lớn (>100MB như bản vẽ): lưu object storage, không lưu blob trong PostgreSQL.
+    • PII tối thiểu: Ngoài user, Platform không lưu PII khách hàng; supplier chỉ lưu thông tin công ty, không cá nhân.
+F.7 Data quality & Master Data
+    • Bảng Master (Project, User, Standard) được khóa: chỉ role được cấp phép mới sửa.
+    • Validation input: unit consistent (MPa vs psi, mm vs inch); cảnh báo khi input sai đơn vị.
+    • Deduplication: MTC có cùng heat_no + supplier + batch được gom nhóm và cảnh báo.
+    • Cảnh báo stale data: Standard > 5 năm chưa đổi version tự động flag "review".
+Phần G – Tích hợp Song hành với IBS ERP (Light Integration)
+G.1 Triết lý tích hợp
+Theo quyết định của user và GD Toan, tích hợp giữa QAQC Platform và IBS ERP được giữ ở mức tối thiểu cần thiết. Mỗi tích hợp mới phải vượt qua "rào chắn 3 câu hỏi":
+    1. Tích hợp này có bắt buộc để QAQC hoạt động đúng không? Nếu không, loại.
+    2. Có thể thay thế bằng export / import thủ công định kỳ không? Nếu có, dùng cách thủ công.
+    3. Nếu bắt buộc, lựa chọn cơ chế ít coupling nhất (API read-only > webhook outbound > message queue > DB sharing).
+G.2 Danh sách tích hợp chính thức
+ID	Tên	Hướng	Cơ chế	Tần suất	Phase
+INT-01	SSO / User Sync	ERP → QAQC	OAuth2 + JWT; endpoint /api/auth/me của ERP	Realtime login + nightly full sync	P1
+INT-02	File Attachment Sync	Both read-only	Mount object storage ERP read-only + copy-on-reference vào QAQC	On-demand + nightly	P1
+INT-03	Project Code snapshot	ERP → QAQC	REST GET /api/projects (cursor pagination)	Nightly	P1
+INT-04	BOM / PO snapshot (tuỳ chọn)	ERP → QAQC	REST GET /api/boms, /api/purchase-orders (read-only)	Nightly + on-demand per project	P2
+INT-05	Outbound event MIR/NCR	QAQC → ERP	HTTP POST webhook, payload signed HMAC	Khi trạng thái thay đổi	P1
+INT-06	Telegram Group notify	QAQC → Telegram	Tái dùng bot token của ERP (shared secret)	Event-based	P1
+INT-07	NAS sync (file standards & MDR history)	NAS → QAQC	Worker mount SMB read-only + nightly scan	Nightly	P1
+INT-08	Audit export cho IT/security	QAQC → SIEM	Syslog / HTTP export	Realtime	P2
+G.3 Chi tiết INT-01 SSO / User Sync
+    • Flow: User đăng nhập tại erp.ibs.vn → ERP cấp JWT. Khi mở qaqc.ibs.vn, SSO adapter đổi JWT ERP thành JWT QAQC thông qua endpoint /auth/exchange.
+    • Chủ động đồng bộ user list đêm để gán role QAQC mới cho người dùng mới thuộc R05/R06/R09.
+    • Phân biệt external user (supplier, vendor) được lưu riêng, không đi qua ERP SSO.
+    • Nếu ERP down, QAQC vẫn đăng nhập được bằng JWT cũ còn hạn (tối đa 8 giờ) + cache user; quá hạn buộc phải chờ ERP.
+G.4 Chi tiết INT-02 File Attachment Sync
+    • QAQC đọc trực tiếp object storage của ERP ở chế độ read-only để tham chiếu (ví dụ: khi xem MIR cần xem PO PDF).
+    • Khi file gốc bị dùng làm evidence QAQC, QAQC clone sang bucket của riêng (namespace qaqc/{projectCode}/{entityType}/{entityId}) + lưu hash + nguồn gốc.
+    • Không ghi ngược vào ERP storage.
+    • Clean up: File chỉ tham chiếu không dùng làm evidence quá 30 ngày sẽ hết cache.
+G.5 Chi tiết INT-05 Outbound Webhook
+Khi các sự kiện sau xảy ra, QAQC gửi POST sang endpoint /api/qaqc/webhook của ERP. ERP tự xử lý (hoặc bỏ qua) tuỳ nghiệp vụ, QAQC không quan tâm kết quả ngoài việc retry khi HTTP 5xx.
+Event	Payload chính	Mục đích bên ERP
+mir.decided	mirId, projectCode, poLines[], decision, decidedBy, decidedAt	Cập nhật flag quarantine/stock, ghi audit
+mir.rejected	mirId, projectCode, rejectReason, relatedNCRId	Khoá PO line, kích hoạt NCR bên ERP (nếu có)
+ncr.critical.created	ncrId, projectCode, severity, title	Hiển thị banner cảnh báo trên PM dashboard
+ncr.closed	ncrId, projectCode, closedAt	Gỡ cảnh báo
+mdr.signed	projectCode, mdrVersion, signedBy, signedAt, url	Đánh dấu dự án đã hoàn tất QA/QC
+hold.opened	projectCode, ip, holdReason	Thông báo PM/Prod để điều phối
+hold.closed	projectCode, ip	Gỡ banner
+    • Retry policy: 5 lần, exponential backoff (30s, 2m, 10m, 30m, 2h).
+    • Thất bại sau 5 lần: đẩy vào dead-letter queue; OpsGenie/Telegram cảnh báo.
+    • Chữ ký: HMAC-SHA256 với shared secret; header X-QAQC-Signature.
+    • Idempotency: Mỗi event có eventId UUID; ERP dedupe theo eventId.
+G.6 Chi tiết INT-07 NAS sync worker
+    • Worker Python chạy 00:30 mỗi ngày.
+    • Scope: /QAQC/04. STANDARDS/**, /QAQC/03. PROJECT/IP*/**, /COMMERCIAL/11 CHUNG CHI VAT TU/**
+    • Bước 1: So sánh inventory NAS với lần quét trước (checksum + mtime).
+    • Bước 2: Upload file mới / đổi lên Object Storage.
+    • Bước 3: Tạo/cập nhật record Standard/MaterialCert/MDRDocument; nếu không parse được tên, tạo "orphan" và gửi về Operation queue để con người xử lý.
+    • Bước 4: Ghi audit NasSyncLog (số file mới, đổi, lỗi).
+    • Bước 5: Cảnh báo nếu file biến mất khỏi NAS mà không qua Platform.
+G.7 Không tích hợp (Non-integration) – nhắc lại
+    • KHÔNG chia sẻ Prisma/PostgreSQL với ERP.
+    • KHÔNG dùng chung Redis cache.
+    • KHÔNG can thiệp workflow P1.1 – P6.5.
+    • KHÔNG block deployment ERP khi QAQC release.
+    • KHÔNG tạo Stored Procedure chung.
+G.8 Quy tắc kiểm tra tích hợp
+    • Mỗi tích hợp có smoke test độc lập chạy nightly.
+    • Dashboard Integration Health (module Admin) hiển thị trạng thái 8 tích hợp và số event fail.
+    • Khi tích hợp fail kéo dài > 2h, gửi cảnh báo cấp P1 tới IT Manager + GD Toan.
+Phần H – Yêu cầu phi chức năng (Non-Functional Requirements)
+Các yêu cầu phi chức năng (NFR) được chia thành 9 nhóm. Dev team phải chứng minh đáp ứng thông qua kiểm thử trước khi go-live mỗi phase.
+H.1 Hiệu năng (Performance)
+ID	Yêu cầu	Ngưỡng P1	Ngưỡng P3
+PRF-01	Thời gian phản hồi API CRUD (P95)	< 500ms	< 300ms
+PRF-02	Thời gian tải trang Inspection detail (P95)	< 2.5s	< 1.5s
+PRF-03	Thời gian truy vấn AI-1 Standards Lookup (P95)	< 5s	< 3s
+PRF-04	Thời gian OCR 1 MTC PDF 10 trang	< 20s	< 10s
+PRF-05	Upload file 50MB qua ổn định mạng LAN	< 30s	< 15s
+PRF-06	Batch NAS sync 1000 file mới/đêm	< 3h	< 1h
+PRF-07	Generate MDR PDF cho 1 dự án (16 category)	< 2 phút	< 60s
+PRF-08	Export Excel 5000 dòng Inspection	< 60s	< 30s
+H.2 Khả năng mở rộng (Scalability)
+    • Horizontal scale: API service stateless; scale ngang bằng cách thêm container.
+    • Dữ liệu: PostgreSQL 15+ với partition theo project_code cho các bảng Inspection/Photo (dự kiến vượt 10M record sau 5 năm).
+    • Target capacity Phase 1: 100 concurrent users, 50 inspections đồng thời, 20GB storage mới/tháng.
+    • Target capacity Phase 4: 500 concurrent users, 200 inspections đồng thời, 200GB storage mới/tháng.
+    • AI Worker: Có thể scale độc lập thành 4 replica cho OCR; 2 replica cho Photo; 2 replica cho RAG.
+H.3 Khả dụng (Availability) & SLO
+Đối tượng	SLO Phase 1	SLO Phase 3	Error Budget
+Core API (ITP, INS, MIR, MDR)	99.0% (giờ làm việc)	99.5% 24/7	3.6h/tháng
+Standards Lookup (AI-1)	98.0% (giờ làm việc)	99.0% (giờ làm việc)	5h/tháng
+Web UI	99.0% (giờ làm việc)	99.5% 24/7	3.6h/tháng
+Outbound Webhook tới ERP	99.0% delivery trong 5 phút	99.5% delivery trong 1 phút	Retry + DLQ bù đắp
+NAS Sync Worker	Thành công > 98% nights	Thành công > 99.5% nights	—
+Giờ làm việc: 07:00 – 19:00 Thứ Hai – Thứ Bảy. Bảo trì có kế hoạch thông báo trước 3 ngày làm việc.
+H.4 Sao lưu & Khôi phục thảm họa (Backup & DR)
+    • RPO Phase 1: ≤ 4h; RTO Phase 1: ≤ 8h.
+    • RPO Phase 3: ≤ 1h; RTO Phase 3: ≤ 2h.
+    • Full backup hàng ngày 02:00, lưu 30 ngày on-prem + 90 ngày off-site (encrypted).
+    • Incremental backup mỗi 4 giờ; WAL archiving liên tục.
+    • Test restore hàng quý: phục hồi random snapshot lên môi trường sandbox, so sánh checksum.
+    • Object storage (MinIO) replicate sang node thứ 2 realtime; nếu sử dụng S3 bật versioning + lifecycle.
+    • DR runbook: có kịch bản failover kèm chủ trì, thời lượng tập huấn 2 lần/năm.
+H.5 Bảo mật (Security)
+H.5.1 Authentication & Authorization
+    • JWT RS256, thời hạn access token 60 phút, refresh token 8 giờ với rotation.
+    • SSO từ IBS ERP (INT-01). MFA bắt buộc cho role QC-DIR, QC-MGR, SYS-ADM, AUD.
+    • RBAC: 12 role nội bộ × 10 module × 4 hành động (Read/Create/Update/Sign).
+    • Session revocation: Admin có thể buộc đăng xuất user cụ thể (blocklist token ID).
+    • Password policy: dùng ERP (single source). QAQC không tự lưu mật khẩu.
+H.5.2 Mã hoá & Bảo vệ dữ liệu
+    • TLS 1.2+ cho mọi endpoint; HSTS bật; chứng chỉ do IT IBS quản lý (gia hạn tự động).
+    • Encryption at rest: PostgreSQL TDE hoặc disk-level LUKS; Object Storage server-side encryption.
+    • Secret: Vault (HashiCorp / ERP-compat) hoặc file .env có quyền 600; không commit vào git.
+    • Không log mật khẩu, token, payload MTC chứa thông tin supplier nhạy cảm.
+H.5.3 Kiểm soát truy cập tệp & evidence
+    • Mọi file attachment có signed URL, hạn 10 phút mặc định.
+    • Download file evidence đòi hỏi quyền tương ứng; log truy cập cho audit.
+    • Watermark động (tên user + thời gian) khi xuất PDF nhạy cảm (MDR, NCR Critical).
+H.5.4 Ứng phó lỗ hổng
+    • Quét SCA (Snyk/Dependabot) hàng tuần.
+    • Pen-test bên thứ 3 trước khi go-live Phase 1 và hàng năm sau đó.
+    • CVE P0 (RCE, Auth bypass): patch trong 72h.
+    • CVE P1 (XSS, SQLi): patch trong 7 ngày.
+    • Secure SDLC: code review bắt buộc, linter security (Semgrep/Bandit).
+H.6 Audit, Tuân thủ & Bảo lưu hồ sơ
+    • Audit trail append-only cho: Inspection decision, NCR, MIR decision, MDR sign, User role change, Standard import.
+    • Mỗi bản ghi audit chứa: userId, role, timestamp UTC, actionType, entityRef, oldValue, newValue, ipAddress, userAgent.
+    • Giữ audit log 5 năm (yêu cầu ISO 9001) và không được chỉnh sửa.
+    • Chữ ký số (digital signature) bắt buộc ở: MIR Accept/Reject, MDR release, NCR Close. Dùng khóa cá nhân kèm OTP.
+    • Tuân thủ ISO 9001:2015, ISO 14001:2015, ISO 45001:2018 ở cấp độ "quản lý hồ sơ chất lượng".
+    • Export audit ra CSV/JSON khi auditor yêu cầu; có quyền filter theo project/module/time.
+H.7 Vận hành & Quan sát (Operability & Observability)
+    • Logging: structured JSON; log level DEBUG/INFO/WARN/ERROR; gom về Loki hoặc Elastic.
+    • Metrics: Prometheus; dashboard Grafana 4 board chính (API performance, DB, AI usage, Integration health).
+    • Tracing: OpenTelemetry cho trục workflow MIR (từ INT-07 đến INT-05).
+    • Alerting: OpsGenie/Telegram – policy cảnh báo theo severity (P0 sms, P1 notify, P2 digest).
+    • Runbook: mỗi module có runbook vận hành (restart service, clear cache, re-run failed job).
+    • Feature flag: toggles cho AI-1..AI-7, Webhook, NAS sync để tắt nhanh khi sự cố.
+H.8 Khả năng sử dụng (Usability) & Đa ngôn ngữ
+    • Ngôn ngữ mặc định: Tiếng Việt; có sẵn English toggle cho toàn bộ label và email.
+    • Tất cả form có auto-save bản draft mỗi 30 giây (giảm mất dữ liệu khi rớt mạng công trường).
+    • Chấp nhận input tiếng Việt có dấu; tên file upload chuẩn hóa ASCII (tránh lỗi SMB).
+    • Responsive design: desktop (≥ 1366), tablet (≥ 10") ưu tiên; mobile đầy đủ ở Phase 4.
+    • Accessibility: WCAG 2.1 AA cho khu vực Manager Dashboard và Supplier Portal.
+    • Cảnh báo tương tác nguy hiểm (Reject MIR, Close NCR, Sign MDR) có modal xác nhận hai lần.
+    • UX offline-tolerant: Inspection form cho phép thao tác offline, đồng bộ khi online.
+H.9 Bảo trì & Khả năng kiểm thử (Maintainability & Testability)
+    • Code coverage Phase 1 ≥ 60%, Phase 3 ≥ 75% cho backend.
+    • E2E test: Cypress/Playwright cho 10 flow chính (ITP create, MIR 6 stage, NCR workflow, etc.).
+    • Contract test: mỗi integration (INT-01..INT-08) có Pact/Postman collection.
+    • Trunk-based dev + feature flag; release cadence 2 tuần/lần trong P1, weekly P3.
+    • Document hoá ADR (Architecture Decision Records) cho thay đổi lớn; review trong SDR.
+    • Infrastructure-as-Code: Terraform/Ansible cho Prod; diff review bắt buộc.
+Phần I – Lộ trình 4 giai đoạn (Roadmap)
+Lộ trình triển khai kéo dài 12 tháng, chia làm 4 phase Q3/2026 – Q2/2027. Nguyên tắc: value-first, ship thứ dùng được ngay; không chờ "all-in" một lần. Mỗi phase có entry/exit criteria rõ ràng; không đạt exit thì không bắt đầu phase tiếp.
+I.1 Tổng quan 4 Phase
+Phase	Thời gian	Chủ đề	Giá trị chính
+P1 – Foundation	Q3/2026 (T07-T09/2026)	Standards KB + MIR + ITP + AI-1/AI-2	Xoá 2 đau lớn nhất: không tìm tiêu chuẩn & MTC thất lạc
+P2 – Expansion	Q4/2026 (T10-T12/2026)	NCR + Welding + NDT + AI-3/AI-4 + Legacy migration	Đóng kín workflow NCR; đưa hồ sơ cũ ibshi1 vào Platform
+P3 – Intelligence	Q1/2027 (T01-T03/2027)	MDR + Calibration + AI-5/AI-6/AI-7 + NAS automation	Tự động MDR & insight; giảm 70% thời gian compile dossier
+P4 – Scale	Q2/2027 (T04-T06/2027)	Mobile app + Supplier Portal + Executive Dashboard + Full Integration	Mở rộng tới hiện trường & supplier; KPI board real-time
+I.2 Phase 1 – Foundation (Q3/2026)
+Mục tiêu: Triển khai hạ tầng & module cốt lõi để bộ phận QA/QC có thể tra cứu tiêu chuẩn và xử lý MIR trên Platform thay vì Excel + NAS.
+Scope module: M1 ITP (cơ bản), M2 Inspection (10 IP), M4 Material / MIR đầy đủ 6 stage, M9 Standards KB.
+AI scope: AI-1 Standards Lookup, AI-2 MTC Cross-Check.
+Tích hợp: INT-01 SSO, INT-02 File attachment sync (read), INT-03 Project snapshot, INT-05 Outbound webhook (chỉ event MIR), INT-06 Telegram, INT-07 NAS sync.
+Deliverables: Platform live tại https://qaqc.ibs.vn; 387+ tiêu chuẩn đã index; 348 MTC folder đã scan; 100% dự án mới có ITP trên Platform.
+I.2.1 Milestone Phase 1
+Tuần	Milestone	Output
+W1-W2	Set up hạ tầng (DB, Redis, MinIO, CI/CD), SSO adapter	Môi trường DEV + TEST sẵn sàng
+W3-W4	Schema ITP, Inspection, MIR, Standard, MaterialCert	DB migration script + seed
+W5-W6	NAS sync worker + OCR pipeline cơ bản	Pilot import 30 PDF tiêu chuẩn
+W7-W8	UI ITP + Inspection (desktop)	Demo 1 dự án IP01-IP03
+W9-W10	UI MIR 6 stage + AI-2 integration	UAT với QC Inspector
+W11	AI-1 RAG deployment + finetune prompt	P@3 ≥ 0.8 trên 200 câu hỏi test
+W12	UAT + fix + go-live	Production release
+I.2.2 Entry Criteria
+    • BRD được phê duyệt bởi GD Toan và Chairman.
+    • Hạ tầng server được IT IBS chuẩn bị (CPU ≥ 16 core, RAM ≥ 64GB, SSD ≥ 2TB).
+    • Dev team ≥ 4 người (2 backend, 1 frontend, 1 AI/data).
+    • Access NAS ibshi.synology.me đã được cấp.
+I.2.3 Exit Criteria
+    • Toàn bộ 387+ PDF tiêu chuẩn đã được index và tra cứu được qua AI-1.
+    • Ít nhất 1 dự án pilot (ví dụ IP-08x) đã chạy đầy đủ ITP → Inspection → MIR trên Platform.
+    • Smoke test 8 integration pass.
+    • SLO Phase 1 đáp ứng trong 2 tuần liên tiếp.
+    • Đào tạo QC Inspector + QC Manager ≥ 80% nhân sự.
+I.3 Phase 2 – Expansion (Q4/2026)
+Mục tiêu: Mở rộng sang NCR, Welding, NDT; hoàn tất di cư dữ liệu lịch sử ibshi1.
+Scope module: M3 NCR đầy đủ, M4 Welding (WPS, WelderQualification, WeldMap), M5 NDT (liên kết NDT vendor).
+AI scope: AI-3 Certificate OCR (production-grade), AI-4 BOM Matching.
+Tích hợp: INT-04 BOM/PO snapshot; mở rộng INT-05 event ncr.* ; kết nối NDT vendor (portal upload result).
+Data migration: Legacy ibshi1 460 acceptance records → Acceptance; WPS/PQR .doc/.docx → WeldingProcedure; ảnh inspection lịch sử.
+I.3.1 Milestone Phase 2
+Tuần	Milestone	Output
+W1-W3	NCR workflow + SLA + notification	Demo flow REPORTED → CLOSED
+W4-W6	Welding module + WPS repository + continuity tracking	Pilot 1 dự án hàn
+W7-W8	NDT + vendor portal cơ bản	Vendor upload test
+W9-W10	AI-3 OCR + AI-4 BOM matching	Field-level F1 ≥ 0.85
+W11	Legacy migration ibshi1	Validation báo cáo
+W12	UAT + release	Production release
+I.3.2 Exit Criteria
+    • 100% NCR mới vào Platform; SLA compliance ≥ 80%.
+    • Legacy ibshi1 migration: ≥ 95% record khớp audit (thiếu / khớp < 5%).
+    • AI-3 OCR đạt F1 ≥ 0.85 ở 100 MTC mẫu.
+    • Vendor NDT đầu tiên onboard xong (ví dụ Tiss Thăng Long).
+I.4 Phase 3 – Intelligence (Q1/2027)
+Mục tiêu: Tự động hóa compile MDR, quản lý Calibration; bổ sung AI nâng cao (ảnh, weld map, trend).
+Scope module: M7 MDR (16 category), M8 Calibration, M2 Inspection nâng cao (photo ML).
+AI scope: AI-5 Photo Analysis, AI-6 Weld Map Generator, AI-7 Trend Analysis.
+Tích hợp: INT-08 Audit export cho IT/Security; mở rộng INT-05 event mdr.signed, hold.opened/closed.
+Infra nâng cấp: DR target RPO ≤ 1h, RTO ≤ 2h; thêm 2 AI worker GPU cho Photo Analysis.
+I.4.1 Milestone Phase 3
+Tuần	Milestone	Output
+W1-W3	MDR 16 category auto-compile	1 dự án full MDR generated
+W4-W5	Calibration master list + reminder	Coverage 100% thiết bị
+W6-W8	AI-5 Photo Analysis (train + deploy)	F1 ≥ 0.7 trên 4 khuyết tật chính
+W9-W10	AI-6 Weld Map Generator	Generate 3 dự án pilot
+W11	AI-7 Trend Analysis + insight weekly	3 insight/tuần xác nhận
+W12	UAT + release + DR test	Production release
+I.4.2 Exit Criteria
+    • Thời gian compile MDR giảm ≥ 70% so với thủ công (từ 1-2 tuần xuống < 2 ngày làm việc).
+    • 100% thiết bị đo lường có record calibration + reminder tự động.
+    • DR drill thành công 2 lần liên tiếp với RTO thực tế ≤ 2h.
+I.5 Phase 4 – Scale (Q2/2027)
+Mục tiêu: Đưa Platform ra hiện trường và supplier; cung cấp dashboard điều hành cho Ban Giám đốc.
+Scope module: Mobile Inspector app (iOS/Android), Supplier Portal (vendor upload MTC, MIR status), Executive Dashboard (KPI realtime).
+AI scope: Mở rộng AI-5 sang nhiều lớp khuyết tật; AI-7 trend cross-project.
+Tích hợp: Event Bridge đầy đủ nếu cần (event-driven); mobile offline sync; dashboard embed ERP portal.
+I.5.1 Milestone Phase 4
+Tuần	Milestone	Output
+W1-W4	Mobile app Inspector (React Native hoặc Flutter)	Pilot 5 inspector
+W5-W7	Supplier Portal (5 supplier đầu tiên)	Vendor self-service MIR status
+W8-W10	Executive Dashboard với KPI realtime	BGĐ review hàng tuần
+W11	Event Bridge full (optional)	Theo yêu cầu nghiệp vụ
+W12	Final UAT + release	Go-live toàn hệ thống
+I.5.2 Exit Criteria
+    • Ít nhất 10 inspector sử dụng mobile app thường xuyên ở công trường/xưởng.
+    • Ít nhất 5 supplier onboard Portal.
+    • Dashboard điều hành cập nhật realtime, được GD Toan ký duyệt.
+    • Toàn bộ 12 tháng đi vào vận hành ổn định, SLO đạt trong 3 tháng liên tiếp.
+I.6 Chiến lược rollback & đóng băng
+    • Mỗi release Phase có "pre-release freeze" 48h (chỉ fix critical, không feature mới).
+    • Rollback plan: mỗi release phải đính kèm kịch bản rollback DB + file storage; test rollback trong UAT.
+    • Feature flag giúp tắt nhanh module AI khi sự cố mà không cần redeploy.
+    • Khi tích hợp với ERP fail kéo dài > 4h, QAQC vào chế độ "standalone" (SSO cache + offline workflow).
+I.7 Nguồn lực dự kiến
+Vai trò	P1	P2	P3	P4	Ghi chú
+Tech Lead / Architect	1 FTE	1 FTE	1 FTE	1 FTE	
+Backend dev (Python/FastAPI)	2 FTE	3 FTE	3 FTE	3 FTE	
+Frontend dev (React/TS)	1 FTE	2 FTE	2 FTE	2-3 FTE	Mobile ở P4
+AI/ML Engineer	1 FTE	1-2 FTE	2 FTE	1 FTE	Peak P3
+Data Engineer	0.5 FTE	1 FTE	1 FTE	0.5 FTE	Migration
+QA/QC Engineer (phần mềm)	1 FTE	1 FTE	1 FTE	1 FTE	
+DevOps / SRE	0.5 FTE	0.5 FTE	1 FTE	1 FTE	
+Domain expert (QC-MGR/DIR)	0.3 FTE	0.3 FTE	0.3 FTE	0.3 FTE	GD Toan + QC team
+Tổng budget P1-P4 dev team ước tính ~8-10 FTE-year, chưa tính chi phí hạ tầng & AI API.
+Phần J – Rủi ro, Gap hiện trạng & Khuyến nghị
+J.1 Gap hiện trạng (từ NAS scan 15/04/2026)
+Kết quả scan NAS ngày 15/04/2026 đã phát hiện các khoảng trống tiêu chuẩn – dữ liệu cần được lấp đầy song song với việc xây Platform. Các gap này là blocker kỹ thuật nếu không xử lý.
+ID	Gap	Tác động	Hành động	Phase
+G1	Thiếu hoàn toàn tiêu chuẩn AS/NZS (dự án tương lai Úc/NZ)	Không thể BID dự án AS/NZS; không có tham chiếu weld/material	Mua bộ AS/NZS 1554, 3678, 3679 + số hóa	P1
+G2	Thiếu 9 ASTM specs vật liệu phổ biến (A53, A106, A252, A283, A500, A516, A572, A588, A992)	MIR không có ngưỡng so sánh chuẩn → AI-2 không hoạt động đầy đủ	Mua + số hóa 9 spec; cập nhật bảng Standard	P1
+G3	Thiếu AWS D1.1 (Structural Welding Code – Steel)	Welding module không có codebook chính cho structural steel	Mua + số hóa; import vào Standard	P1-P2
+G4	Naming convention NAS không chuẩn (348 folder MTC lẫn lộn)	AI training khó; orphan records nhiều	Áp convention F.4; Commercial gán thủ công dần	P1-P2
+G5	MTC scan nhiều file blurry / nghiêng, OCR khó	AI-3 accuracy thấp ban đầu	Yêu cầu supplier re-scan; fine-tune OCR model	P2
+G6	Không có master list Calibration thiết bị đo	Không thể track lịch hiệu chuẩn	Inventory thiết bị, tạo master list Excel trước, import Phase 3	P3
+G7	Lịch sử NCR rải rác ở email/Zalo, không tập trung	Thiếu data cho AI-7 Trend Analysis	Migrate best-effort; chấp nhận baseline mới từ P2	P2
+G8	Chưa có quy chuẩn NDT vendor reporting	Khó tích hợp kết quả NDT 4 vendor	Ban hành mẫu NDT report + portal upload ở P2	P2
+J.2 Rủi ro & kế hoạch ứng phó (Risk Register)
+ID	Rủi ro	Xác suất	Tác động	Chiến lược giảm thiểu
+R1	Dev team không đủ domain knowledge QA/QC kim loại	Cao	Cao	Bố trí QC-MGR (GD Toan) dành 0.3 FTE làm product owner; có buổi training hàng tuần 2 tiếng
+R2	Tích hợp SSO với ERP không hoạt động ổn định	Trung bình	Cao	Fallback local login cho QC trong 3 ngày đầu; giữ cache JWT 8h
+R3	QC Inspector phản kháng chuyển từ giấy/Excel sang Platform	Trung bình	Trung bình	Pilot với inspector hào hứng trước; thiết kế UX form ngắn, auto-save; không ép 100% ngay từ P1
+R4	AI hallucinate gây sai lầm quyết định MIR	Trung bình	Cao	Human-in-the-loop bắt buộc; confidence threshold 0.8; log reasoning
+R5	NAS sync thất bại / NAS down kéo dài	Thấp	Trung bình	Worker retry + alert; copy tiêu chuẩn quan trọng lên Object Storage làm bản sao; SLA NAS do IT ngoài
+R6	Chi phí AI cloud vượt budget	Trung bình	Trung bình	Self-host mô hình open-source cho công việc đơn giản (Llama 3/Qwen); dùng Claude chỉ cho reasoning phức tạp; theo dõi billing theo tuần
+R7	Dữ liệu MTC chứa thông tin supplier nhạy cảm rò rỉ ra LLM	Thấp	Cao	PII masking trước khi gửi ra cloud; sử dụng self-hosted cho batch OCR nhạy cảm
+R8	GD Toan quá tải, không kịp review roadmap	Cao	Trung bình	Chỉ định deputy (QC-DIR hoặc Tech Lead) ra quyết định P2 trở xuống; escalate P0/P1 lên GD
+R9	Phạm vi mở rộng mất kiểm soát (scope creep)	Cao	Cao	Change Request formal; rào chắn 3 câu hỏi cho tích hợp; BRD này là baseline ký duyệt
+R10	Cập nhật tiêu chuẩn (ASTM/ISO) version mới phá vỡ rule	Thấp	Trung bình	Bảng Standard có version; rule compare đính vào version; alert khi có version mới
+R11	Hạ tầng on-prem gặp sự cố phần cứng	Thấp	Cao	Dự phòng node thứ 2; backup off-site; hợp đồng bảo trì phần cứng IT
+R12	Supplier không upload MTC đúng hạn → tắc MIR	Cao	Trung bình	Supplier Portal P4 cho phép upload; Commercial theo dõi SLA; phạt hợp đồng
+J.3 Quick wins (ngay trong tháng đầu)
+Các việc có thể làm ngay khi BRD được duyệt, không cần chờ Phase 1 xong:
+    • QW1 – Số hóa mục lục 387+ tiêu chuẩn (chỉ metadata, chưa cần full OCR) để làm baseline AI-1.
+    • QW2 – Ban hành naming convention mới (F.4) + huấn luyện Commercial trước khi có Platform.
+    • QW3 – Tạo template NCR / MIR form mới (chuẩn với schema F.3) để thu thập data chuẩn ngay trong hôm nay.
+    • QW4 – Mua 10 spec ASTM còn thiếu (G2); đây là hành động tiêu chuẩn hóa tổ chức, không cần chờ dev.
+    • QW5 – Setup Telegram group QC để thay Zalo nhánh (bước chuẩn bị cho INT-06).
+J.4 Dependencies (phụ thuộc bên ngoài)
+    • IT IBS: cung cấp hạ tầng (server, mạng, chứng chỉ SSL, backup storage) trước W1 Phase 1.
+    • Commercial: ban hành SLA mới cho supplier về thời hạn upload MTC.
+    • Chairman/GD Toan: phê duyệt BRD, ngân sách, và ra quyết định khi tích hợp mới phát sinh.
+    • NDT vendor (4 đơn vị): chấp thuận cấu trúc report mới + portal upload.
+    • HR: phê duyệt headcount dev QAQC + chế độ on-call cho AI-3 OCR review.
+J.5 Giả định (Assumptions)
+    • A1 – IBS ERP Production tiếp tục hoạt động ổn định và cung cấp SSO, PO snapshot đúng contract.
+    • A2 – NAS ibshi.synology.me được duy trì và không đổi cấu trúc gốc trong 6 tháng đầu.
+    • A3 – Ngân sách và headcount được phê duyệt theo kế hoạch phần I.7.
+    • A4 – Nhân sự QC hiện tại sẵn sàng tham gia pilot + training.
+    • A5 – IBS sẽ mua các tiêu chuẩn thiếu (G1-G3) trong 3 tháng đầu.
+    • A6 – Chi phí Claude/OpenAI API dưới 2.000 USD/tháng ở Phase 1-2; không vượt 5.000 USD/tháng ở P3.
+J.6 Khuyến nghị triển khai
+    4. Ký duyệt BRD trong T04/2026 và bắt đầu Phase 1 đầu T07/2026 (Q3/2026).
+    5. Chỉ định sớm Product Owner nội bộ (gợi ý QC-MGR, tức GD Toan) để ra quyết định hàng ngày.
+    6. Ưu tiên Quick Wins song song với bootstrap hạ tầng.
+    7. Thuê pen-test bên thứ 3 trước go-live Phase 1; ngân sách riêng.
+    8. Xây dựng "QAQC Center of Excellence" nhỏ: 1 QC Manager + 1 data steward nội bộ để duy trì tiêu chuẩn nghiệp vụ.
+    9. Thiết lập Steering Committee 2 tuần/lần trong P1-P2 để bám sát roadmap.
+    10. Review BRD sau 6 tháng (T10/2026) để điều chỉnh Phase 3-4 theo thực tế.
+Phần K – Phụ lục (Appendix)
+K.1 Danh mục Inspection Point (10 IP) theo Fab Pipeline
+IP	Tên	Fab stage	Tiêu chuẩn áp dụng điển hình	Ghi chú
+IP01	Material Receiving Inspection	Pre-Fab	ASTM A36/A516/A572, MTC check	Liên kết M4 MIR
+IP02	Marking / Cutting Inspection	CUT	AWS D1.1 §5, drawing tolerance	Dimensional
+IP03	Fit-Up Inspection	FIT	AWS D1.1 §5.22, gap/root opening	Pre-weld
+IP04	Welding Inspection (visual)	WLD	AWS D1.1 §6 Visual, WPS compliance	Link M4 Welding
+IP05	NDT – UT/RT/PT/MT	WLD	ASME V, ISO 17637, API 1104	Link M5 NDT vendor
+IP06	Machining / Drilling	MCH	Drawing tolerance	Dimensional
+IP07	Trial Fit / FAT	TRF/FAT	Project spec + customer sign	Customer witness điển hình
+IP08	Surface Preparation / Blasting	BLS	ISO 8501-1 Sa 2.5/3.0	Link với SSPC
+IP09	Painting / Coating	INS	ISO 12944, customer PPS	DFT check
+IP10	Final Packing / Release	PCK/RTS	Packing list, MDR check	Gate release to customer
+K.2 Mẫu User Story & Acceptance Criteria
+Tất cả user story tuân theo mẫu sau, dev team có thể tái sử dụng khi backlog hóa:
+As a <role>, I want to <action>, so that <benefit>. Acceptance Criteria: - AC1: Given <context>, when <event>, then <outcome>. - AC2: ... - AC3: ...
+Ví dụ (US01.03 – Duyệt ITP):
+As a QC Manager, I want to review and sign-off ITP v1.0 for a project, so that Inspection can start using checkpoint list bound to standards. AC1: Given ITP draft status DRAFT, when QC Manager clicks Approve with digital signature, then status moves to APPROVED and version frozen. AC2: After approval, ITPItem list becomes read-only; any change creates v1.1 DRAFT. AC3: Telegram notification sent to QC team and PM within 30 seconds.
+K.3 Template Business Rule
+BR-ID: BRxx.xx Name: <tên ngắn gọn> Trigger: <sự kiện làm rule kích hoạt> Condition: <điều kiện kiểm tra> Action: <hành động hệ thống thực hiện> Owner: <role chịu trách nhiệm> Escalation: <nếu condition fail>
+Ví dụ BR04.02 – MIR Quarantine: Trigger = MIR status = PENDING_QA; Condition = MaterialCert missing or AI-2 FAIL; Action = Auto-move lô hàng sang bay Quarantine, gửi notification R05 + QC-INS; Owner = QC-INS; Escalation = nếu > 24h chưa xử lý, báo QC-MGR.
+K.4 Nguồn tài liệu tham chiếu (Source Documents)
+ID	Tài liệu	Nguồn	Ghi chú
+S1	IBSHI_QAQC_Platform_Master_Consolidation_v1.1.docx	GD Toan	Consolidation 12 nguồn + NAS scan 15/04/2026
+S2	Standards_Lookup_Tool.html	Prototype IT	UI baseline cho module M9 Standards KB
+S3	IBS ERP Production – CLAUDE.md	Repo ERP	Hướng dẫn dev hệ thống ERP hiện tại
+S4	NAS ibshi.synology.me:5000 (04. STANDARDS, 11 CHUNG CHI VAT TU, 03. PROJECT)	IT	Nguồn dữ liệu lịch sử
+S5	Legacy ibshi1 SQLite	Phòng QC	460 acceptance records 2024-2025
+S6	Excel Calibration hiện tại	Phòng QC	Inventory thiết bị đo
+S7	ISO 9001:2015 clause 7.1.5, 8.4, 8.6, 8.7, 9.1	ISO	Tham chiếu cho mục H.6
+S8	AWS D1.1:2020 Structural Welding Code – Steel	AWS (cần mua)	Tham chiếu Welding
+S9	ASME BPVC Section V (NDE)	ASME	Tham chiếu NDT
+S10	API 1104 Welding of Pipelines	API	Tham chiếu pipeline
+S11	ISO 17637:2016 NDT Visual testing	ISO	Tham chiếu IP04
+S12	ISO 8501-1, ISO 12944-5	ISO	Surface prep & paint
+K.5 Ánh xạ ISO Clause ↔ Module
+ISO clause	Yêu cầu tóm tắt	Module QAQC đáp ứng
+ISO 9001 §7.1.5 Monitoring & measuring resources	Thiết bị đo được hiệu chuẩn, truy vết	M8 Calibration
+ISO 9001 §8.4 Control of externally provided processes	Kiểm soát vật tư + NDT vendor	M4 MIR + M5 NDT (vendor portal)
+ISO 9001 §8.5 Production and service provision	ITP, inspection records	M1 ITP + M2 Inspection
+ISO 9001 §8.6 Release of products	Hold Point / Release decision	M2 (Hold) + M10 RFI + M7 MDR
+ISO 9001 §8.7 Control of nonconforming outputs	NCR workflow	M3 NCR
+ISO 9001 §9.1 Monitoring, measurement, analysis	Audit trail + trend	AuditLog + AI-7 Trend
+ISO 9001 §9.2 Internal audit	Internal audit record	Module tương lai (P3-P4)
+ISO 14001 §8.2 Emergency preparedness	Không trực tiếp nhưng môi trường painting (IP09) lưu vết	M2 IP09 + evidence
+ISO 45001 §8.1.2 Eliminating hazards	Welding & NDT safety document	M4 WPS + M5 NDT RA
+K.6 Ma trận ID tham chiếu chéo
+Bảng tổng hợp ID đã dùng trong BRD để tra cứu nhanh:
+Prefix	Ý nghĩa	Phần chứa
+BO-xx	Business Objective	A.3
+AP-xx	Architecture Principle	A.5
+USxx.xx	User Story	Phần D module tương ứng
+ACxx.xx	Acceptance Criterion	Phần D + K.2
+BRxx.xx	Business Rule	Phần D + K.3
+M1..M10	Module code	D
+IP01..IP10	Inspection Point	D.2, K.1
+AI-1..AI-7	AI Model	E
+INT-01..INT-08	Integration point	C.3, G
+PRF-xx	Performance NFR	H.1
+G1..G8	Gap	J.1
+R1..R12	Risk	J.2
+QW1..QW5	Quick Win	J.3
+A1..A6	Assumption	J.5
+K.7 Bảng thuật ngữ mở rộng
+Bổ sung vào Glossary A.7:
+Thuật ngữ	Giải thích
+Heat number (Heat No)	Số lô luyện của thép do nhà máy cán; cùng heat no → cùng thành phần hóa học
+Lot / Batch	Đơn vị sản xuất nhỏ hơn heat, nhóm các sản phẩm cùng điều kiện
+RFI – Request For Information	Công cụ trao đổi chính thức giữa QAQC và khách hàng / tư vấn / supplier
+Hold Point	Điểm dừng bắt buộc trong ITP, cần chữ ký duyệt mới đi tiếp
+Witness Point	Điểm mà khách hàng / tư vấn được mời chứng kiến; nếu vắng, QA tiếp tục
+Dossier	Hồ sơ chất lượng tổng hợp (MDR) giao khách; thường 16 category
+PQR – Procedure Qualification Record	Hồ sơ kết quả test WPS thực tế để xác nhận WPS đạt chuẩn
+Continuity	Thợ hàn phải hàn liên tục trong 6 tháng để giữ chứng chỉ; ngoài 6 tháng phải test lại
+Quarantine	Trạng thái cách ly lô hàng nghi ngờ, chờ xử lý
+Orphan file	File chưa thể ánh xạ với metadata; cần con người gán thủ công
+K.8 Danh sách phê duyệt BRD
+BRD này phải có đầy đủ chữ ký dưới đây trước khi Phase 1 bắt đầu:
+Vai trò	Tên	Trách nhiệm	Chữ ký / Ngày
+Chairman	(Chủ tịch IBS)	Phê duyệt chiến lược & ngân sách	
+Giám đốc / QC-DIR	Toan Duc	Product Owner, phê duyệt scope kỹ thuật	
+IT Manager	(TBD)	Phê duyệt hạ tầng & tích hợp với ERP	
+Tech Lead QAQC Platform	(TBD)	Cam kết delivery	
+Đại diện Tài chính	(TBD)	Phê duyệt budget phase 1-4	
+K.9 Kết thúc tài liệu
+BRD IBSHI QAQC Platform v1.0 kết thúc tại đây. Mọi thay đổi sau phê duyệt phải đi qua quy trình Change Request, có đánh số version (v1.1, v1.2...). Phiên bản v1.0 là tài liệu baseline để dev team bắt đầu Phase 1.
+"Chất lượng không phải là hành vi, mà là thói quen." – Aristotle  QAQC Platform là công cụ để biến thói quen đó thành dữ liệu.  IBSHI – 17/04/2026

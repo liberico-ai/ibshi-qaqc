@@ -1,0 +1,53 @@
+CREATE TABLE IF NOT EXISTS sys_users (
+  id SERIAL PRIMARY KEY,
+  full_name VARCHAR(255) NOT NULL,
+  username VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  created_by INT,
+  updated_by INT
+);
+
+CREATE TABLE IF NOT EXISTS sys_roles (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) UNIQUE NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  created_by INT,
+  updated_by INT
+);
+
+CREATE TABLE IF NOT EXISTS sys_role_actions (
+  id SERIAL PRIMARY KEY,
+  role_id INT REFERENCES sys_roles(id) ON DELETE CASCADE,
+  action_name VARCHAR(255) NOT NULL,
+  module VARCHAR(100),
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  created_by INT,
+  updated_by INT,
+  UNIQUE(role_id, action_name)
+);
+
+CREATE TABLE IF NOT EXISTS sys_user_roles (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES sys_users(id) ON DELETE CASCADE,
+  role_id INT REFERENCES sys_roles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  created_by INT,
+  updated_by INT,
+  UNIQUE(user_id, role_id)
+);
+
+CREATE TABLE IF NOT EXISTS sys_settings (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  created_by INT,
+  updated_by INT
+);

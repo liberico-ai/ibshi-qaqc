@@ -1,0 +1,1 @@
+ALTER TABLE sys_settings ADD COLUMN IF NOT EXISTS is_encrypted BOOLEAN DEFAULT false;

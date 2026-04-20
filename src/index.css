@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html, body, #app {
+    height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 transition-colors duration-200;
+  }
+  .dark body {
+    @apply bg-[#0f1117] text-slate-300;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(150, 150, 150, 0.3);
+    border-radius: 3px;
+  }
+  html.dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(150, 150, 150, 0.5);
+  }
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+@layer components {
+  /* Sidebar Link Styles */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 mx-3 text-[13px] font-medium text-slate-600 dark:text-gray-400 
+           rounded-lg transition-all duration-200 cursor-pointer;
+  }
+  .sidebar-link:hover {
+    @apply text-slate-900 bg-slate-100 dark:text-white dark:bg-white/[0.06];
+  }
+  .sidebar-link.router-link-exact-active {
+    @apply text-blue-600 bg-blue-50 dark:text-white dark:bg-white/[0.08];
+  }
+  .sidebar-link svg {
+    @apply w-[18px] h-[18px] flex-shrink-0 opacity-60 dark:opacity-50;
+  }
+  .sidebar-link.router-link-exact-active svg {
+    @apply opacity-100;
+  }
+  
+  /* Card Styles */
+  .card {
+    @apply bg-white border border-gray-200 shadow-sm dark:shadow-none dark:bg-[#1a1a2e] dark:border-[#252540] rounded-xl;
+  }
+  
+  /* Section Header */
+  .section-header {
+    @apply px-7 pt-5 pb-2 text-[10px] font-bold text-slate-400 dark:text-gray-500/80 uppercase tracking-[0.12em];
+  }
+
+  /* Vue Transition Classes for Toasts */
+  .toast-enter-active,
+  .toast-leave-active {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .toast-enter-from,
+  .toast-leave-to {
+    opacity: 0;
+    transform: translateX(30px) scale(0.95);
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+  }
+}
