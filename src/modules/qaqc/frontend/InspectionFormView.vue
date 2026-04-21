@@ -5,6 +5,9 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
       </router-link>
       <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Kiểm Tra — {{ inspection?.ip_code }}</h2>
+      <span v-if="hasDraft" class="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">
+        Bản nháp đã lưu
+      </span>
     </div>
 
     <div v-if="loading" class="card p-8 text-center text-slate-500">Đang tải...</div>
@@ -53,9 +56,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import { useRoute } from 'vue-router';
+import { offlineFormStore } from '@/core/offline-form-store.js';
 
 const route = useRoute();
 const inspection = ref(null);
@@ -63,7 +67,20 @@ const form = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const signing = ref(false);
+const hasDraft = ref(false);
 const toast = ref({ show: false, ok: true, message: '' });
+
+let autoSaveTimer = null;
+
+function draftKey() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  return `${user.id ?? 'anon'}_inspection_${route.params.id}`;
+}
+
+async function saveDraft() {
+  if (!form.value.length) return;
+  await offlineFormStore.saveDraft(draftKey(), form.value);
+}
 
 async function load() {
   loading.value = true;
@@ -80,7 +97,9 @@ async function load() {
       const cpData = (await cpRes.json()).data;
       checkpoints = cpData?.checkpoints ?? [];
     }
-    form.value = checkpoints.map(cp => ({
+
+    // Build form from server data
+    const serverForm = checkpoints.map(cp => ({
       checkpoint_id: cp.id,
       label: cp.label,
       required: cp.required,
@@ -90,6 +109,16 @@ async function load() {
       measured_unit: existingResults[cp.id]?.measured_unit ?? '',
       note: existingResults[cp.id]?.note ?? '',
     }));
+
+    // Restore draft if newer than server data
+    const draft = await offlineFormStore.loadDraft(draftKey());
+    if (draft && draft.length === serverForm.length) {
+      form.value = draft;
+      hasDraft.value = true;
+    } else {
+      form.value = serverForm;
+      hasDraft.value = false;
+    }
   } finally {
     loading.value = false;
   }
@@ -106,8 +135,19 @@ async function saveResults() {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ results: form.value }),
     });
-    if (!res.ok) throw new Error((await res.json()).error);
-    showToast(true, 'Đã lưu kết quả');
+    const data = await res.json();
+
+    if (res.status === 202 && data.queued) {
+      // Queued offline — keep draft, show offline message
+      await saveDraft();
+      showToast(true, 'Đã lưu vào hàng đợi offline. Sẽ đồng bộ khi có mạng.');
+    } else if (!res.ok) {
+      throw new Error(data.error || 'Lỗi lưu kết quả');
+    } else {
+      await offlineFormStore.clearDraft(draftKey());
+      hasDraft.value = false;
+      showToast(true, 'Đã lưu kết quả');
+    }
   } catch (e) {
     showToast(false, e.message || 'Lỗi lưu kết quả');
   } finally {
@@ -122,9 +162,18 @@ async function sign() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
-    if (!res.ok) throw new Error((await res.json()).error);
-    showToast(true, 'Đã ký số và hoàn thành kiểm tra');
-    await load();
+    const data = await res.json();
+
+    if (res.status === 202 && data.queued) {
+      showToast(true, 'Đã lưu vào hàng đợi offline. Chữ ký sẽ được xử lý khi có mạng.');
+    } else if (!res.ok) {
+      throw new Error(data.error || 'Lỗi ký số');
+    } else {
+      await offlineFormStore.clearDraft(draftKey());
+      hasDraft.value = false;
+      showToast(true, 'Đã ký số và hoàn thành kiểm tra');
+      await load();
+    }
   } catch (e) {
     showToast(false, e.message || 'Lỗi ký số');
   } finally {
@@ -137,5 +186,15 @@ function showToast(ok, message) {
   setTimeout(() => { toast.value.show = false; }, 3500);
 }
 
-onMounted(load);
+// Watch form changes → auto-save draft every 30s
+watch(form, () => { hasDraft.value = true; }, { deep: true });
+
+onMounted(async () => {
+  await load();
+  autoSaveTimer = setInterval(saveDraft, 30_000);
+});
+
+onUnmounted(() => {
+  if (autoSaveTimer) clearInterval(autoSaveTimer);
+});
 </script>

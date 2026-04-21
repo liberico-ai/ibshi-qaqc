@@ -39,20 +39,22 @@ class AuditLogService {
    *
    * @param {{ action: string, tableName: string, entityId?: string|number, newData?: object|null }} params
    */
-  log({ action, tableName, entityId = null, newData = null }) {
+  log({ action, tableName, entityId = null, newData = null, offlineSynced = false, clientTimestamp = null }) {
     if (!this.#enabled) return;
     if (SKIP_TABLES.has(tableName)) return;
 
     const ctx = getRequestContext();
     const entry = {
-      userId:    ctx?.userId    ?? null,
-      username:  ctx?.username  ?? 'system',
-      ipAddress: ctx?.ipAddress ?? null,
+      userId:          ctx?.userId    ?? null,
+      username:        ctx?.username  ?? 'system',
+      ipAddress:       ctx?.ipAddress ?? null,
       action,
       tableName,
-      entityId:  entityId !== null && entityId !== undefined ? String(entityId) : null,
+      entityId:        entityId !== null && entityId !== undefined ? String(entityId) : null,
       newData,
-      category:  `${tableName}:${action}`,
+      category:        `${tableName}:${action}`,
+      offlineSynced,
+      clientTimestamp,
     };
 
     if (ctx?.auditBuffer) {
@@ -71,8 +73,8 @@ class AuditLogService {
   _write(entry) {
     pool.query(
       `INSERT INTO sys_logs
-         (user_id, username, action, category, entity_table, entity_id, new_data, ip_address)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+         (user_id, username, action, category, entity_table, entity_id, new_data, ip_address, offline_synced, client_timestamp)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [
         entry.userId,
         entry.username,
@@ -82,6 +84,8 @@ class AuditLogService {
         entry.entityId,
         entry.newData ? JSON.stringify(entry.newData) : null,
         entry.ipAddress,
+        entry.offlineSynced ?? false,
+        entry.clientTimestamp ?? null,
       ]
     ).catch(err => log.error({ err }, 'Failed to write audit log'));
   }

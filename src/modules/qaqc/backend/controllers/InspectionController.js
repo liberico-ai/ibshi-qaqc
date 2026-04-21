@@ -1,8 +1,8 @@
-import { paginate } from '../../../../core/db.js';
+import { paginate, pool } from '../../../../core/db.js';
 import { inspectionRepo } from '../repositories/InspectionRepository.js';
 import { InspectionService } from '../services/InspectionService.js';
 import { AppError } from '../../../../core/errors.js';
-import { pool } from '../../../../core/db.js';
+import { auditLog } from '../../../../core/audit-log.js';
 
 export class InspectionController {
   static async getAll(req, res) {
@@ -32,6 +32,18 @@ export class InspectionController {
     if (!existing) throw new AppError(404, 'Inspection not found');
     await inspectionRepo.saveResults(req.params.id, req.body.results ?? []);
     await InspectionService.transition(req.params.id, 'IN_PROGRESS');
+
+    const offlineSynced = req.headers['x-offline-sync'] === 'true';
+    const clientTimestamp = req.headers['x-client-timestamp'] ?? null;
+    auditLog.log({
+      action: 'update',
+      tableName: 'qaqc_inspections',
+      entityId: req.params.id,
+      newData: { results_count: (req.body.results ?? []).length },
+      offlineSynced,
+      clientTimestamp,
+    });
+
     res.json({ data: await inspectionRepo.findWithResults(req.params.id) });
   }
 

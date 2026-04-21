@@ -138,6 +138,9 @@
         </div>
       </header>
 
+      <!-- Offline Status Banner -->
+      <OfflineBanner />
+
       <!-- Main Content -->
       <main class="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0f1117] p-8 transition-colors">
         <router-view></router-view>
@@ -185,6 +188,7 @@ import { useToast } from '@/composables/useToast.js'
 import { useAuth } from '@/composables/useAuth.js'
 import { apiFetch } from '@/utils/api.js'
 import LoginView from './modules/system/frontend/LoginView.vue';
+import OfflineBanner from './components/OfflineBanner.vue';
 
 const isDark = ref(true)
 const menus = ref([])
