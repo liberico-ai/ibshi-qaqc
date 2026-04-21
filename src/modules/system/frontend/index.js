@@ -31,6 +31,7 @@ export default function registerSystemModule(app, router) {
       { path: 'cronjobs', name: 'SystemCronjobs', component: CronjobsView },
       { path: 'logs',     name: 'SystemLogs',     component: SysLogsView },
       { path: 'profile',  name: 'ProfileSettings', component: () => import('./ProfileView.vue') },
+      { path: 'mfa',     name: 'MFASetup',        component: () => import('./MFASetupView.vue') },
       { path: 'about',     name: 'SystemAbout',     component: AboutView },
       { path: 'providers', name: 'SystemProviders', component: ProvidersView }
     ]

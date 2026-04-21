@@ -124,12 +124,24 @@
               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
             <label for="is_active" class="text-sm text-slate-700 dark:text-slate-300">Kích hoạt</label>
           </div>
+          <!-- Config guide -->
+          <div v-if="currentGuide" class="rounded-lg border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 p-3 text-xs space-y-1.5">
+            <p class="font-semibold text-blue-700 dark:text-blue-400 mb-2">Hướng dẫn cấu hình — {{ activeClassName }}</p>
+            <div v-for="field in currentGuide" :key="field.key" class="flex gap-2">
+              <code class="shrink-0 font-mono text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/20 px-1.5 py-0.5 rounded">{{ field.key }}</code>
+              <span class="text-blue-700 dark:text-blue-400">
+                <span class="font-medium">{{ field.type }}</span> — {{ field.desc }}
+                <span v-if="field.example" class="text-blue-500 dark:text-blue-500"> (vd: <em>{{ field.example }}</em>)</span>
+              </span>
+            </div>
+          </div>
+
           <!-- Config JSON -->
           <div>
             <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
               Config (JSON) <span class="font-normal text-slate-400">— sẽ được mã hóa khi lưu</span>
             </label>
-            <textarea v-model="form.configJson" rows="5" placeholder='{"mode":"mock","url":"","secret":""}'
+            <textarea v-model="form.configJson" rows="5" :placeholder="currentPlaceholder"
               class="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none resize-none">
             </textarea>
             <p v-if="configError" class="mt-1 text-xs text-red-500">{{ configError }}</p>
@@ -158,8 +170,64 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { apiFetch } from '@/utils/api.js';
+
+const CONFIG_GUIDES = {
+  'IbshiErpSSOProvider': {
+    fields: [
+      { key: 'mode',  type: 'string', desc: '"mock" để test nội bộ, "live" để kết nối thật', example: 'live' },
+      { key: 'url',   type: 'string', desc: 'Base URL của ERP SSO API', example: 'https://erp.ibshi.com' },
+      { key: 'token', type: 'string', desc: 'Bearer token xác thực với ERP' },
+    ],
+    placeholder: '{\n  "mode": "mock",\n  "url": "",\n  "token": ""\n}',
+  },
+  'IbshiErpWebhookProvider': {
+    fields: [
+      { key: 'mode',   type: 'string', desc: '"mock" hoặc "live"', example: 'live' },
+      { key: 'url',    type: 'string', desc: 'Endpoint webhook của ERP nhận sự kiện', example: 'https://erp.ibshi.com/webhook' },
+      { key: 'secret', type: 'string', desc: 'HMAC-SHA256 secret để ký payload gửi đi' },
+    ],
+    placeholder: '{\n  "mode": "mock",\n  "url": "",\n  "secret": ""\n}',
+  },
+  'IbshiErpProjectsProvider': {
+    fields: [
+      { key: 'mode',  type: 'string', desc: '"mock" hoặc "live"', example: 'live' },
+      { key: 'url',   type: 'string', desc: 'Base URL API ERP Projects', example: 'https://erp.ibshi.com' },
+      { key: 'token', type: 'string', desc: 'Bearer token xác thực' },
+    ],
+    placeholder: '{\n  "mode": "mock",\n  "url": "",\n  "token": ""\n}',
+  },
+  'IbshiErpNASProvider': {
+    fields: [
+      { key: 'mode',  type: 'string', desc: '"mock" hoặc "live"', example: 'live' },
+      { key: 'url',   type: 'string', desc: 'Base URL NAS API', example: 'https://nas.ibshi.com' },
+      { key: 'token', type: 'string', desc: 'Bearer token xác thực NAS' },
+    ],
+    placeholder: '{\n  "mode": "mock",\n  "url": "",\n  "token": ""\n}',
+  },
+  'AIStandardsLookupProvider': {
+    fields: [
+      { key: 'mode',    type: 'string', desc: '"rule-based" (không cần API key) hoặc "gemini"', example: 'gemini' },
+      { key: 'api_key', type: 'string', desc: 'Google Gemini API key (chỉ cần khi mode=gemini)' },
+    ],
+    placeholder: '{\n  "mode": "rule-based",\n  "api_key": ""\n}',
+  },
+  'AIMTCCrossCheckProvider': {
+    fields: [
+      { key: 'mode',    type: 'string', desc: '"rule-based" hoặc "gemini"', example: 'gemini' },
+      { key: 'api_key', type: 'string', desc: 'Google Gemini API key (chỉ cần khi mode=gemini)' },
+    ],
+    placeholder: '{\n  "mode": "rule-based",\n  "api_key": ""\n}',
+  },
+  'TelegramOTPProvider': {
+    fields: [
+      { key: 'bot_token',        type: 'string', desc: 'Token Bot Telegram (lấy từ @BotFather)', example: '123456:ABC-DEF...' },
+      { key: 'message_template', type: 'string', desc: 'Nội dung tin nhắn. Dùng {{otp}} làm placeholder mã OTP', example: 'Mã OTP: {{otp}}. Hiệu lực 5 phút.' },
+    ],
+    placeholder: '{\n  "bot_token": "",\n  "message_template": "Mã OTP của bạn: {{otp}}. Hiệu lực 5 phút."\n}',
+  },
+};
 
 const providers = ref([]);
 const classes = ref([]);
@@ -171,6 +239,10 @@ const configError = ref('');
 
 const modal = ref({ show: false, editing: null });
 const form = ref({ name: '', class_name: '', description: '', is_active: true, configJson: '' });
+
+const activeClassName = computed(() => modal.value.editing?.class_name ?? form.value.class_name);
+const currentGuide = computed(() => CONFIG_GUIDES[activeClassName.value]?.fields ?? null);
+const currentPlaceholder = computed(() => CONFIG_GUIDES[activeClassName.value]?.placeholder ?? '{\n  \n}');
 const toast = ref({ show: false, ok: true, message: '' });
 
 async function loadProviders(page = 1) {

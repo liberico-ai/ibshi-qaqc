@@ -28,6 +28,11 @@ export function requireAction(actionName) {
         return res.status(401).json({ error: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn' });
       }
       
+      // Partial token (step: 'mfa') không được dùng trên protected routes
+      if (decoded.step === 'mfa') {
+        return res.status(401).json({ error: 'Cần hoàn thành xác thực MFA', code: 'MFA_STEP_REQUIRED' });
+      }
+
       req.user = decoded;
       const userId = decoded.id;
 

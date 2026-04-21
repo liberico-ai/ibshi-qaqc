@@ -70,6 +70,28 @@
             <p class="text-xs text-gray-400 mt-2">Áp dụng ngay lập tức, không cần khởi động lại server.</p>
           </div>
 
+          <!-- MFA Enforcement -->
+          <div class="border-t border-gray-100 dark:border-[#252540] pt-6">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Bắt buộc xác thực hai yếu tố (MFA)</label>
+                <p class="text-xs text-gray-400 mt-1">Khi bật, người dùng chưa enroll MFA sẽ bị chặn sau thời gian ân hạn.</p>
+              </div>
+              <button type="button" @click="mfa.enabled = !mfa.enabled"
+                :class="['relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none',
+                  mfa.enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600']">
+                <span :class="['pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200',
+                  mfa.enabled ? 'translate-x-5' : 'translate-x-0']" />
+              </button>
+            </div>
+            <div v-if="mfa.enabled" class="flex items-center gap-3 mt-3">
+              <label class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Thời gian ân hạn:</label>
+              <input v-model.number="mfa.grace_days" type="number" min="0" max="90"
+                class="w-20 px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none dark:bg-black/20 dark:border-[#252540] dark:text-white transition-all" />
+              <span class="text-sm text-gray-400">ngày kể từ khi tạo tài khoản</span>
+            </div>
+          </div>
+
           <!-- Logo -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Đường dẫn Logo (URL)</label>
@@ -129,6 +151,8 @@ const form = ref({
   log_level: 'info'
 });
 
+const mfa = ref({ enabled: false, grace_days: 7 });
+
 const loadSettings = async () => {
   loading.value = true;
   error.value = null;
@@ -141,6 +165,13 @@ const loadSettings = async () => {
       if (dbSettings.default_theme !== undefined) form.value.default_theme = dbSettings.default_theme;
       if (dbSettings.logo_url !== undefined) form.value.logo_url = dbSettings.logo_url;
       if (dbSettings.log_level !== undefined) form.value.log_level = dbSettings.log_level;
+      if (dbSettings.mfa_enforcement) {
+        try {
+          const p = JSON.parse(dbSettings.mfa_enforcement);
+          mfa.value.enabled = !!p.enabled;
+          mfa.value.grace_days = p.grace_days ?? 7;
+        } catch { /* keep defaults */ }
+      }
     } else {
       error.value = 'Không thể kết nối đến máy chủ cài đặt';
     }
@@ -163,7 +194,10 @@ const saveSettings = async () => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(form.value)
+      body: JSON.stringify({
+        ...form.value,
+        mfa_enforcement: JSON.stringify({ enabled: mfa.value.enabled, grace_days: mfa.value.grace_days }),
+      })
     });
     
     if (res.ok) {

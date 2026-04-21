@@ -4,10 +4,15 @@ import { registerSystemMenus } from './menus.js';
 import { registerSystemCronjobs } from './cronjobs.js';
 import { SettingsService } from '../../../core/settings.js';
 import { auditLog } from '../../../core/audit-log.js';
+import { providerRegistry } from '../../../core/provider-registry.js';
+import { TelegramOTPProvider } from './providers/TelegramOTPProvider.js';
 
 export default async function registerSystemModule(app) {
   // 1. Phân quyền: Đăng ký các quyền hạn (Actions/Permissions) mà module này có
   registerSystemActions();
+
+  // MFA delivery providers
+  providerRegistry.register('TelegramOTPProvider', TelegramOTPProvider, 'mfa', 'Gửi HOTP qua Telegram bot');
 
   // 2. Menu: Đăng ký các menu của module này
   registerSystemMenus();

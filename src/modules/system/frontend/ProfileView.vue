@@ -45,6 +45,51 @@
       </div>
     </div>
 
+    <!-- MFA Card -->
+    <div class="card p-6 md:p-8">
+      <h3 class="text-base font-semibold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
+        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        Xác thực hai yếu tố (MFA)
+      </h3>
+      <p class="text-xs text-slate-400 dark:text-gray-500 mb-5">Quản lý các phương thức xác thực bổ sung cho tài khoản.</p>
+
+      <!-- Active factors -->
+      <div v-if="mfaFactors.length" class="space-y-2 mb-5">
+        <div v-for="f in mfaFactors" :key="f.id"
+             class="flex items-center justify-between px-4 py-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs font-mono font-bold bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">{{ f.factor_type.toUpperCase() }}</span>
+            <span class="text-sm text-slate-700 dark:text-gray-300">{{ f.factor_name }}</span>
+            <span class="text-xs text-slate-400 dark:text-gray-500">Đã kích hoạt {{ f.enrolled_at ? new Date(f.enrolled_at).toLocaleDateString('vi-VN') : '' }}</span>
+          </div>
+          <button @click="mfaDisable(f.id)" class="text-xs text-red-500 hover:text-red-700 transition-colors">Tắt</button>
+        </div>
+      </div>
+      <div v-else class="flex items-center gap-2 text-sm text-slate-400 dark:text-gray-500 mb-5 p-3 rounded-lg bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-[#252540]">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        Chưa có phương thức MFA nào được kích hoạt.
+      </div>
+
+      <!-- Backup codes -->
+      <div v-if="mfaFactors.length" class="mb-5">
+        <button @click="mfaGenBackup" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Tạo lại backup codes</button>
+        <div v-if="backupCodes.length" class="mt-3 p-4 rounded-lg bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20">
+          <p class="text-xs font-semibold text-yellow-800 dark:text-yellow-300 mb-2">Lưu lại các backup codes — chỉ hiển thị một lần</p>
+          <div class="grid grid-cols-2 gap-1 font-mono text-sm text-slate-700 dark:text-gray-300">
+            <span v-for="c in backupCodes" :key="c">{{ c }}</span>
+          </div>
+          <button @click="backupCodes = []" class="mt-2 text-xs text-slate-500 hover:underline">Đã lưu, đóng</button>
+        </div>
+      </div>
+
+      <!-- Add new factor button → route to MFA setup -->
+      <router-link to="/system/mfa"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-blue-500/40 text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Thêm phương thức MFA
+      </router-link>
+    </div>
+
     <!-- Security Card -->
     <div class="card p-6 md:p-8">
       <h3 class="text-base font-semibold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
@@ -84,8 +129,10 @@
 import { ref, onMounted } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import { useToast } from '@/composables/useToast.js';
+import { useRouter } from 'vue-router';
 
 const { success, error } = useToast();
+const router = useRouter();
 
 const currentUser = ref(null);
 const form = ref({ full_name: '' });
@@ -94,10 +141,34 @@ const pass = ref({ current: '', new: '', confirm: '' });
 const savingProfile = ref(false);
 const savingPassword = ref(false);
 
+// MFA
+const mfaFactors = ref([]);
+const backupCodes = ref([]);
+
+const loadMFA = async () => {
+  try {
+    const res = await apiFetch('/api/system/mfa/factors');
+    if (res.ok) mfaFactors.value = (await res.json()).factors ?? [];
+  } catch { /* silent */ }
+};
+
+const mfaDisable = async (id) => {
+  if (!confirm('Tắt factor này?')) return;
+  await apiFetch(`/api/system/mfa/factors/${id}`, { method: 'DELETE' });
+  await loadMFA();
+};
+
+const mfaGenBackup = async () => {
+  if (!confirm('Tạo bộ backup codes mới sẽ xóa bộ cũ. Tiếp tục?')) return;
+  const res = await apiFetch('/api/system/mfa/backup-codes');
+  if (res.ok) backupCodes.value = (await res.json()).codes ?? [];
+};
+
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   currentUser.value = user;
   form.value.full_name = user.full_name || '';
+  loadMFA();
 });
 
 const saveProfile = async () => {
