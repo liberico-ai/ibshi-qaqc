@@ -3,6 +3,7 @@ import { mirRepo } from '../repositories/MIRRepository.js';
 import { MIRWorkflowService } from '../services/MIRWorkflowService.js';
 import { MIRCrossCheckService } from '../services/MIRCrossCheckService.js';
 import { AppError } from '../../../../core/errors.js';
+import { SignatureService } from '../../../system/backend/services/SignatureService.js';
 
 export class MIRController {
   static async getAll(req, res) {
@@ -22,7 +23,7 @@ export class MIRController {
   }
 
   static async create(req, res) {
-    const { project_id, po_ref, po_line_ids, supplier_id } = req.body;
+    const { project_id, po_ref, po_line_ids, supplier_id } = req.validated ?? req.body;
     if (!project_id) throw new AppError(400, 'project_id required');
     const record = await mirRepo.create({
       project_id, po_ref, po_line_ids: JSON.stringify(po_line_ids ?? []),
@@ -32,7 +33,7 @@ export class MIRController {
   }
 
   static async uploadMTC(req, res) {
-    const { standard_id, heat_no, grade, supplier, file_url, ocr_extracted } = req.body;
+    const { standard_id, heat_no, grade, supplier, file_url, ocr_extracted } = req.validated ?? req.body;
     const mir = await mirRepo.findOne(req.params.id);
     if (!mir) throw new AppError(404, 'MIR not found');
 
@@ -53,13 +54,18 @@ export class MIRController {
     const cert = mir.certs[0];
     if (!cert) throw new AppError(400, 'No MTC cert found for this MIR');
 
-    const result = await MIRCrossCheckService.crossCheck(cert.id, req.body.standard_id ?? cert.standard_id);
+    const result = await MIRCrossCheckService.crossCheck(cert.id, (req.validated ?? req.body).standard_id ?? cert.standard_id);
     await MIRWorkflowService.advance(req.params.id, 'MTC_VERIFIED');
     res.json({ data: result });
   }
 
   static async decide(req, res) {
-    const { decision, waiver_note, ai_result } = req.body;
+    const { decision, waiver_note, ai_result, signature_id } = req.validated ?? req.body;
+    if (!signature_id) throw new AppError(400, 'signature_id required — ký số trước khi quyết định');
+    const sig = await SignatureService.getSignature('MIR', req.params.id);
+    if (!sig || sig.isVoided || sig.id !== signature_id) {
+      throw new AppError(403, 'Chữ ký số không hợp lệ hoặc không khớp với tài liệu này');
+    }
     const record = await MIRWorkflowService.decide(req.params.id, decision, req.user?.id, waiver_note, ai_result);
     res.json({ data: record });
   }

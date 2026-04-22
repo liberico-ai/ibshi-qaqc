@@ -15,6 +15,9 @@
         <div><span class="block text-xs text-slate-500 mb-1">Dự án</span><span class="font-medium text-slate-800 dark:text-slate-200">{{ mir.project_code }}</span></div>
         <div><span class="block text-xs text-slate-500 mb-1">Supplier</span><span class="font-medium text-slate-800 dark:text-slate-200">{{ mir.supplier_id ?? '—' }}</span></div>
         <div><span class="block text-xs text-slate-500 mb-1">Ngày tạo</span><span class="font-medium text-slate-800 dark:text-slate-200">{{ new Date(mir.created_at).toLocaleDateString('vi-VN') }}</span></div>
+        <div v-if="signature" class="col-span-2 sm:col-span-3 pt-1">
+          <SignatureBadge :signature="signature" />
+        </div>
       </div>
 
       <!-- Stage Actions -->
@@ -36,9 +39,9 @@
         </button>
         <template v-if="mir.stage === 'MTC_VERIFIED'">
           <span class="text-xs text-slate-500 self-center">Quyết định:</span>
-          <button @click="decide('ACCEPT')" class="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">ACCEPT</button>
-          <button @click="decide('CONDITIONAL')" class="px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">CONDITIONAL</button>
-          <button @click="decide('REJECT')" class="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">REJECT</button>
+          <button @click="openSignCeremony('ACCEPT')" class="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">ACCEPT</button>
+          <button @click="openSignCeremony('CONDITIONAL')" class="px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">CONDITIONAL</button>
+          <button @click="openSignCeremony('REJECT')" class="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">REJECT</button>
         </template>
         <button v-if="mir.stage === 'DECIDED'" v-can="'qaqc.mir.warehouse'" @click="warehouse"
           class="px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
@@ -106,15 +109,27 @@
       </div>
     </template>
 
+    <SignatureCeremony
+      :show="signCeremony.show"
+      entity-type="MIR"
+      :entity-id="route.params.id"
+      :summary-text="`MIR ${mir?.po_ref ?? ''} — Quyết định: ${signCeremony.decision}`"
+      :doc-payload="{ mirId: route.params.id, decision: signCeremony.decision }"
+      @success="onSignSuccess"
+      @cancel="signCeremony.show = false"
+    />
+
     <div v-if="toast.show" :class="toast.ok ? 'bg-green-600' : 'bg-red-600'"
       class="fixed bottom-5 right-5 z-50 text-white text-sm px-4 py-3 rounded-lg shadow-lg">{{ toast.message }}</div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, reactive } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import { useRoute } from 'vue-router';
+import SignatureCeremony from '@/components/SignatureCeremony.vue';
+import SignatureBadge from '@/components/SignatureBadge.vue';
 
 const route = useRoute();
 const mir = ref(null);
@@ -122,6 +137,8 @@ const loading = ref(false);
 const crossCheckResult = ref(null);
 const mtcForm = ref({ heat_no: '', grade: '', file_url: '' });
 const toast = ref({ show: false, ok: true, message: '' });
+const signature = ref(null);
+const signCeremony = reactive({ show: false, decision: '' });
 
 const STAGE_COLORS = {
   EXPECTED: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
@@ -138,6 +155,8 @@ async function load() {
   try {
     const res = await apiFetch(`/api/qaqc/mir/${route.params.id}`);
     mir.value = (await res.json()).data;
+    const sigRes = await apiFetch(`/api/system/signature/MIR/${route.params.id}`).catch(() => null);
+    if (sigRes?.ok) signature.value = (await sigRes.json()).data;
   } finally {
     loading.value = false;
   }
@@ -178,10 +197,16 @@ async function runCrossCheck() {
   } catch (e) { showToast(false, e.message); }
 }
 
-async function decide(decision) {
+function openSignCeremony(decision) {
+  signCeremony.decision = decision;
+  signCeremony.show = true;
+}
+
+async function onSignSuccess(sig) {
+  signCeremony.show = false;
   try {
-    await apiPost('/decide', { decision });
-    showToast(true, `Quyết định: ${decision}`);
+    await apiPost('/decide', { decision: signCeremony.decision, signature_id: sig.id });
+    showToast(true, `Quyết định: ${signCeremony.decision} — đã ký số`);
     await load();
   } catch (e) { showToast(false, e.message); }
 }
