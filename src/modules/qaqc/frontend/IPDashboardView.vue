@@ -1,6 +1,13 @@
 <template>
   <div class="space-y-4">
-    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Dashboard — IP × Dự Án</h2>
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Dashboard — IP × Dự Án</h2>
+      <span v-if="pendingHoldsCount > 0"
+        class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-500/30">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0-6v2m-6 4h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+        {{ pendingHoldsCount }} Hold Point{{ pendingHoldsCount > 1 ? 's' : '' }} Pending
+      </span>
+    </div>
 
     <div v-if="loading" class="card p-8 text-center text-slate-500">Đang tải...</div>
     <div v-else-if="!rows.length" class="card p-8 text-center text-slate-500">Chưa có dữ liệu kiểm tra</div>
@@ -46,6 +53,7 @@ import { apiFetch } from '@/utils/api.js';
 
 const rows = ref([]);
 const loading = ref(false);
+const pendingHoldsCount = ref(0);
 
 function completionPct(r) {
   if (!r.total) return 0;
@@ -55,8 +63,12 @@ function completionPct(r) {
 onMounted(async () => {
   loading.value = true;
   try {
-    const res = await apiFetch('/api/qaqc/inspections/dashboard');
-    rows.value = (await res.json()).data ?? [];
+    const [dashRes, holdsRes] = await Promise.all([
+      apiFetch('/api/qaqc/inspections/dashboard'),
+      apiFetch('/api/qaqc/itp/pending-holds').catch(() => null),
+    ]);
+    rows.value = (await dashRes.json()).data ?? [];
+    if (holdsRes?.ok) pendingHoldsCount.value = ((await holdsRes.json()).data ?? []).length;
   } finally {
     loading.value = false;
   }

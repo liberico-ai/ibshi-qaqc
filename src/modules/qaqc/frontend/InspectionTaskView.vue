@@ -20,6 +20,14 @@
       <button @click="load(1)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">Lọc</button>
     </div>
 
+    <div v-if="pendingHolds.length" class="flex items-start gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-xl text-sm text-amber-800 dark:text-amber-300">
+      <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      <span>Có <strong>{{ pendingHolds.length }}</strong> Hold Point chưa được release.
+        IP tiếp theo sẽ bị chặn cho đến khi release:
+        {{ pendingHolds.map(h => h.ip_code).join(', ') }}
+      </span>
+    </div>
+
     <div class="card p-0 overflow-hidden">
       <table class="w-full text-left text-sm">
         <thead>
@@ -71,15 +79,20 @@ const loading = ref(false);
 const status = ref('PENDING');
 const projectId = ref('');
 const pagination = ref({ page: 1, totalPages: 1 });
+const pendingHolds = ref([]);
 
 async function load(page = 1) {
   loading.value = true;
   try {
     const params = new URLSearchParams({ page, ...(status.value && { status: status.value }), ...(projectId.value && { projectId: projectId.value }) });
-    const res = await apiFetch(`/api/qaqc/inspections?${params}`);
-    const json = await res.json();
+    const [inspRes, holdsRes] = await Promise.all([
+      apiFetch(`/api/qaqc/inspections?${params}`),
+      apiFetch(`/api/qaqc/itp/pending-holds${projectId.value ? `?projectId=${projectId.value}` : ''}`).catch(() => null),
+    ]);
+    const json = await inspRes.json();
     items.value = json.data ?? [];
     pagination.value = json.pagination;
+    if (holdsRes?.ok) pendingHolds.value = (await holdsRes.json()).data ?? [];
   } finally {
     loading.value = false;
   }

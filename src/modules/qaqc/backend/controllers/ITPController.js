@@ -2,6 +2,8 @@ import { paginate } from '../../../../core/db.js';
 import { itpRepo } from '../repositories/ITPRepository.js';
 import { ITPWorkflowService } from '../services/ITPWorkflowService.js';
 import { AppError } from '../../../../core/errors.js';
+import { SignatureService } from '../../../system/backend/services/SignatureService.js';
+import { HoldPointService } from '../services/HoldPointService.js';
 
 export class ITPController {
   static async getAll(req, res) {
@@ -20,7 +22,8 @@ export class ITPController {
   }
 
   static async create(req, res) {
-    const { plan: planBody, items, project_id, product_type } = req.body;
+    const body = req.validated ?? req.body;
+    const { plan: planBody, items, project_id, product_type } = body;
     const plan = planBody ?? { project_id, product_type };
     if (!plan.project_id) throw new AppError(400, 'project_id required');
     plan.created_by = req.user?.id;
@@ -32,7 +35,7 @@ export class ITPController {
     const existing = await itpRepo.findOne(req.params.id);
     if (!existing) throw new AppError(404, 'ITP not found');
     if (existing.status !== 'DRAFT') throw new AppError(400, 'Only DRAFT plans can be edited');
-    const record = await itpRepo.update(req.params.id, req.body);
+    const record = await itpRepo.update(req.params.id, req.validated ?? req.body);
     res.json({ data: record });
   }
 
@@ -42,7 +45,14 @@ export class ITPController {
   }
 
   static async approve(req, res) {
-    const { targetStatus } = req.body;
+    const { targetStatus, signature_id } = req.validated ?? req.body;
+    if (targetStatus === 'DIRECTOR_APPROVED') {
+      if (!signature_id) throw new AppError(400, 'signature_id required cho DIRECTOR_APPROVED');
+      const sig = await SignatureService.getSignature('ITP', req.params.id);
+      if (!sig || sig.isVoided || sig.id !== signature_id) {
+        throw new AppError(403, 'Chữ ký số không hợp lệ hoặc không khớp với tài liệu này');
+      }
+    }
     const record = await ITPWorkflowService.transition(req.params.id, targetStatus, req.user?.id);
     res.json({ data: record });
   }
@@ -53,7 +63,7 @@ export class ITPController {
   }
 
   static async copy(req, res) {
-    const { targetProjectId } = req.body;
+    const { targetProjectId } = req.validated ?? req.body;
     if (!targetProjectId) throw new AppError(400, 'targetProjectId required');
     const record = await ITPWorkflowService.copyPlan(req.params.id, targetProjectId, req.user?.id);
     res.status(201).json({ data: record });
@@ -63,7 +73,7 @@ export class ITPController {
     const plan = await itpRepo.findOne(req.params.id);
     if (!plan) throw new AppError(404, 'ITP not found');
     if (plan.status !== 'DRAFT') throw new AppError(400, 'Only DRAFT plans can be edited');
-    const item = await itpRepo.addItem(req.params.id, req.body);
+    const item = await itpRepo.addItem(req.params.id, req.validated ?? req.body);
     res.status(201).json({ data: item });
   }
 
@@ -72,6 +82,36 @@ export class ITPController {
     if (!plan) throw new AppError(404, 'ITP not found');
     if (plan.status !== 'DRAFT') throw new AppError(400, 'Only DRAFT plans can be edited');
     await itpRepo.removeItem(req.params.itemId);
+    res.json({ ok: true });
+  }
+
+  static async getHoldStatus(req, res) {
+    const status = await HoldPointService.getHoldStatus(req.params.planId);
+    res.json({ data: status });
+  }
+
+  static async getPendingHolds(req, res) {
+    const items = await HoldPointService.getPendingHoldPoints(req.query.projectId ?? null);
+    res.json({ data: items });
+  }
+
+  static async releaseHoldPoint(req, res) {
+    const { comment, signature_id } = req.validated ?? req.body;
+    const release = await HoldPointService.releaseHoldPoint(req.params.itemId, {
+      userId: req.user.id,
+      comment,
+      signatureId: signature_id ?? null,
+    });
+    res.status(201).json({ data: release });
+  }
+
+  static async overrideHoldPoint(req, res) {
+    const { reason, signature_id } = req.validated ?? req.body;
+    await HoldPointService.overrideHoldPoint(req.params.itemId, {
+      userId: req.user.id,
+      reason,
+      signatureId: signature_id ?? null,
+    });
     res.json({ ok: true });
   }
 

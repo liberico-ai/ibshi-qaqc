@@ -18,7 +18,7 @@
           class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">Gửi duyệt</button>
         <button v-if="plan.status === 'UNDER_REVIEW'" v-can="'qaqc.itp.approve'" @click="transition('MANAGER_APPROVED')"
           class="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">Manager Approve</button>
-        <button v-if="plan.status === 'MANAGER_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('DIRECTOR_APPROVED')"
+        <button v-if="plan.status === 'MANAGER_APPROVED'" v-can="'qaqc.itp.approve'" @click="openDirectorSign"
           class="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">Director Approve</button>
         <button v-if="plan.status === 'DIRECTOR_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('ACTIVE')"
           class="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">Kích hoạt</button>
@@ -41,8 +41,8 @@
             <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400 w-12">Seq</th>
             <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400">IP Code</th>
             <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400">Mô tả</th>
-            <th class="px-4 py-2 text-center text-slate-600 dark:text-slate-400">Hold</th>
-            <th class="px-4 py-2 text-center text-slate-600 dark:text-slate-400">Witness</th>
+            <th class="px-4 py-2 text-center text-slate-600 dark:text-slate-400">Hold Type</th>
+            <th class="px-4 py-2 text-center text-slate-600 dark:text-slate-400">Hold Status</th>
             <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400">Checkpoints</th>
           <th v-if="plan.status === 'DRAFT'" class="px-4 py-2"></th>
           </tr></thead>
@@ -53,11 +53,22 @@
               <td class="px-4 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">{{ item.ip_code ?? '—' }}</td>
               <td class="px-4 py-2 text-slate-700 dark:text-slate-300 max-w-xs">{{ item.description ?? '—' }}</td>
               <td class="px-4 py-2 text-center">
-                <span v-if="item.hold_flag" class="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">H</span>
+                <span v-if="holdTypeOf(item) === 'H'" class="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">H</span>
+                <span v-else-if="holdTypeOf(item) === 'HC'" class="px-1.5 py-0.5 rounded text-xs bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">HC</span>
+                <span v-else-if="holdTypeOf(item) === 'W' || item.witness_flag" class="px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">W</span>
                 <span v-else class="text-slate-300 dark:text-slate-600">—</span>
               </td>
               <td class="px-4 py-2 text-center">
-                <span v-if="item.witness_flag" class="px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">W</span>
+                <template v-if="['H','HC'].includes(holdTypeOf(item))">
+                  <span v-if="holdStatus[item.id]?.released"
+                    class="px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Released</span>
+                  <button v-else-if="plan.status === 'ACTIVE'" v-can="'qaqc.itp.approve'"
+                    @click="openRelease(item)"
+                    class="px-2 py-0.5 rounded text-xs bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:text-red-400 transition-colors">
+                    Pending — Release
+                  </button>
+                  <span v-else class="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">Pending</span>
+                </template>
                 <span v-else class="text-slate-300 dark:text-slate-600">—</span>
               </td>
               <td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">{{ item.checkpoints?.length ?? 0 }} checkpoint(s)</td>
@@ -152,16 +163,62 @@
       </div>
     </div>
 
+    <!-- Release Hold Modal -->
+    <div v-if="releaseModal.show" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="w-full max-w-sm bg-white dark:bg-[#12122a] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#252540] p-6 space-y-4">
+        <h3 class="text-base font-semibold text-slate-800 dark:text-white">Release Hold Point — {{ releaseModal.ipCode }}</h3>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Lý do release <span class="text-slate-400">(tối thiểu 20 ký tự)</span></label>
+          <textarea v-model="releaseModal.comment" rows="3" placeholder="Mô tả lý do release Hold Point này..."
+            class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none resize-none" />
+          <p class="text-xs mt-1" :class="releaseModal.comment.length >= 20 ? 'text-green-500' : 'text-slate-400'">
+            {{ releaseModal.comment.length }}/20 ký tự
+          </p>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button @click="releaseModal.show = false"
+            class="flex-1 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg transition-colors">
+            Huỷ
+          </button>
+          <button @click="startReleaseSigning" :disabled="releaseModal.comment.length < 20"
+            class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50">
+            Ký và Release
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <SignatureCeremony
+      :show="signModal"
+      :entity-type="releaseModal.isOverride ? 'HOLD_OVERRIDE' : 'HOLD_RELEASE'"
+      :entity-id="releaseModal.itemId"
+      :summary-text="`${releaseModal.isOverride ? 'Override' : 'Release'} Hold Point — ${releaseModal.ipCode}`"
+      :doc-payload="{ itemId: releaseModal.itemId, comment: releaseModal.comment }"
+      @success="onReleaseSignSuccess"
+      @cancel="signModal = false"
+    />
+
+    <SignatureCeremony
+      :show="directorSignModal"
+      entity-type="ITP"
+      :entity-id="route.params.id"
+      :summary-text="`ITP ${plan?.product_type} — Director Approve`"
+      :doc-payload="{ itpId: route.params.id, action: 'DIRECTOR_APPROVED' }"
+      @success="onDirectorSignSuccess"
+      @cancel="directorSignModal = false"
+    />
+
     <div v-if="toast.show" :class="toast.ok ? 'bg-green-600' : 'bg-red-600'"
       class="fixed bottom-5 right-5 z-50 text-white text-sm px-4 py-3 rounded-lg shadow-lg">{{ toast.message }}</div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import { useRoute } from 'vue-router';
 import { useProjects } from './useProjects.js';
+import SignatureCeremony from '@/components/SignatureCeremony.vue';
 
 const route = useRoute();
 const { projects } = useProjects();
@@ -173,6 +230,10 @@ const copyTargetId = ref('');
 const itemModal = ref(false);
 const savingItem = ref(false);
 const itemForm = ref({ ip_code: '', description: '', hold_flag: false, witness_flag: false, acceptance_criteria: '', checkpoints: [] });
+const holdStatus = ref({});
+const releaseModal = reactive({ show: false, itemId: '', ipCode: '', comment: '', isOverride: false });
+const signModal = ref(false);
+const directorSignModal = ref(false);
 
 function openAddItem() {
   itemForm.value = { ip_code: '', description: '', hold_flag: false, witness_flag: false, acceptance_criteria: '', checkpoints: [] };
@@ -230,9 +291,72 @@ async function load() {
   try {
     const res = await apiFetch(`/api/qaqc/itp/${route.params.id}`);
     plan.value = (await res.json()).data;
+    await loadHoldStatus();
   } finally {
     loading.value = false;
   }
+}
+
+async function loadHoldStatus() {
+  try {
+    const res = await apiFetch(`/api/qaqc/itp/${route.params.id}/hold-status`);
+    if (res.ok) holdStatus.value = (await res.json()).data ?? {};
+  } catch { /* silent */ }
+}
+
+function holdTypeOf(item) {
+  return item.hold_type ?? (item.hold_flag ? 'H' : 'NONE');
+}
+
+function openRelease(item) {
+  releaseModal.itemId = item.id;
+  releaseModal.ipCode = item.ip_code ?? item.id;
+  releaseModal.comment = '';
+  releaseModal.isOverride = false;
+  releaseModal.show = true;
+}
+
+function startReleaseSigning() {
+  releaseModal.show = false;
+  signModal.value = true;
+}
+
+async function onReleaseSignSuccess(sig) {
+  signModal.value = false;
+  try {
+    const endpoint = releaseModal.isOverride
+      ? `/api/qaqc/itp/items/${releaseModal.itemId}/override`
+      : `/api/qaqc/itp/items/${releaseModal.itemId}/release`;
+    const body = releaseModal.isOverride
+      ? { reason: releaseModal.comment, signature_id: sig.id }
+      : { comment: releaseModal.comment, signature_id: sig.id };
+    const res = await apiFetch(endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Lỗi release');
+    showToast(true, `Hold Point ${releaseModal.ipCode} đã được release`);
+    await loadHoldStatus();
+  } catch (e) {
+    showToast(false, e.message);
+  }
+}
+
+function openDirectorSign() {
+  directorSignModal.value = true;
+}
+
+async function onDirectorSignSuccess(sig) {
+  directorSignModal.value = false;
+  const res = await apiFetch(`/api/qaqc/itp/${route.params.id}/approve`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetStatus: 'DIRECTOR_APPROVED', signature_id: sig.id }),
+  });
+  const json = await res.json();
+  if (!res.ok) { showToast(false, json.error || 'Lỗi chuyển trạng thái'); return; }
+  plan.value = json.data;
+  showToast(true, 'DIRECTOR_APPROVED — đã ký số');
 }
 
 async function transition(targetStatus) {
