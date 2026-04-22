@@ -1,12 +1,42 @@
+import { ZodError } from 'zod';
 import { AppError } from './errors.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('validate');
+
+const SUSPICIOUS_RE = /DROP\s+TABLE|SELECT\s+\*\s+FROM|<script|UNION\s+SELECT|INSERT\s+INTO\s+\w|DELETE\s+FROM/i;
 
 /**
- * Lightweight input-validation middleware (no external deps).
- * 
- * Usage in routes:
- *   app.post('/users', validate({ username: [required, isString], password: [required, minLength(6)] }), handler)
- * 
- * @param {Object<string, Function[]>} rules - field name → array of validator fns
+ * Zod-based validation middleware.
+ * Sets req.validated = parsed data; rejects with RFC 7807 400 on failure.
+ */
+export function validateSchema(schema) {
+  return (req, res, next) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      const raw = JSON.stringify(req.body ?? '');
+      if (SUSPICIOUS_RE.test(raw)) {
+        log.warn({ userId: req.user?.id, ip: req.ip, body: raw.slice(0, 500) }, 'suspicious_input');
+      }
+      const errors = result.error.issues.map(i => ({
+        field: i.path.join('.'),
+        msg: i.message,
+      }));
+      return res.status(400).json({
+        type: '/errors/validation',
+        title: 'Validation Failed',
+        status: 400,
+        errors,
+      });
+    }
+    req.validated = result.data;
+    next();
+  };
+}
+
+/**
+ * Legacy rules-based validation middleware (kept for system routes).
+ * Usage: validate({ username: [required, isString], password: [required, minLength(6)] })
  */
 export function validate(rules) {
   return (req, _res, next) => {
@@ -18,7 +48,7 @@ export function validate(rules) {
         const msg = check(value, field);
         if (msg) {
           errors.push(msg);
-          break; // one error per field
+          break;
         }
       }
     }
@@ -31,7 +61,7 @@ export function validate(rules) {
   };
 }
 
-// ── Validator helpers ────────────────────────────────────────────
+// ── Legacy validator helpers ──────────────────────────────────────
 
 export const required = (value, field) =>
   (value === undefined || value === null || value === '')

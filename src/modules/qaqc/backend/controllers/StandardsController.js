@@ -19,7 +19,7 @@ export class StandardsController {
   }
 
   static async create(req, res) {
-    const { standard, specs } = req.body;
+    const { standard, specs } = req.validated ?? req.body;
     const record = await standardsRepo.createWithSpecs({ standard, specs });
     res.status(201).json({ data: record });
   }
@@ -27,12 +27,12 @@ export class StandardsController {
   static async update(req, res) {
     const existing = await standardsRepo.findOne(req.params.id);
     if (!existing) throw new AppError(404, 'Standard not found');
-    const record = await standardsRepo.update(req.params.id, req.body);
+    const record = await standardsRepo.update(req.params.id, req.validated ?? req.body);
     res.json({ data: record });
   }
 
   static async search(req, res) {
-    const { query, filters = {} } = req.body;
+    const { query, filters = {} } = req.validated ?? req.body;
     const { data, total } = await StandardsSearchService.search({ query, ...filters });
     res.json({ data, total });
   }
