@@ -2,11 +2,18 @@
   <div class="space-y-4">
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Tiêu Chuẩn KB</h2>
-      <button v-can="'qaqc.standards.write'" @click="openCreate"
-        class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Thêm tiêu chuẩn
-      </button>
+      <div class="flex items-center gap-2">
+        <button v-can="'qaqc.standards.write'" @click="router.push('/qaqc/standards/import')"
+          class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Import PDF
+        </button>
+        <button v-can="'qaqc.standards.write'" @click="openCreate"
+          class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Thêm tiêu chuẩn
+        </button>
+      </div>
     </div>
 
     <!-- Filters -->

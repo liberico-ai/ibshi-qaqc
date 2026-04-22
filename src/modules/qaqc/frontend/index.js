@@ -3,6 +3,7 @@ import ProjectsView           from './ProjectsView.vue';
 import StandardsListView      from './StandardsListView.vue';
 import StandardsDetailView    from './StandardsDetailView.vue';
 import StandardsLookupView    from './StandardsLookupView.vue';
+import StandardsImportView    from './StandardsImportView.vue';
 import ITPListView            from './ITPListView.vue';
 import ITPDetailView          from './ITPDetailView.vue';
 import InspectionTaskView     from './InspectionTaskView.vue';
@@ -18,6 +19,7 @@ export default function registerQAQCFrontend(app, router) {
     children: [
       { path: 'projects',                        name: 'QAQCProjects',        component: ProjectsView },
       { path: 'standards',                       name: 'QAQCStandards',       component: StandardsListView },
+      { path: 'standards/import',                name: 'QAQCStandardsImport', component: StandardsImportView },
       { path: 'standards/lookup',                name: 'QAQCStandardsLookup', component: StandardsLookupView },
       { path: 'standards/:id',                   name: 'QAQCStandardDetail',  component: StandardsDetailView },
       { path: 'itp',                             name: 'QAQCITPList',         component: ITPListView },
