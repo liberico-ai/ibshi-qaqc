@@ -1,5 +1,6 @@
 import { pool } from '../../../../core/db.js';
 import { AppError } from '../../../../core/errors.js';
+import { providerRegistry } from '../../../../core/provider-registry.js';
 
 export class StandardsLookupController {
   // GET /api/qaqc/standards-lookup
@@ -47,6 +48,31 @@ export class StandardsLookupController {
       results.push(rows[0]);
     }
     res.json({ data: results });
+  }
+
+  // POST /api/qaqc/standards-lookup/ai-search
+  static async aiSearch(req, res) {
+    const { query, filters } = req.body;
+    if (!query?.trim()) throw new AppError(400, 'query required');
+    const provider = providerRegistry.getInstance('ai-standards-lookup');
+    if (!provider) throw new AppError(503, 'AI standards lookup provider not configured');
+    const result = await provider.lookup(query.trim(), filters ?? {});
+    res.json({ data: result });
+  }
+
+  // POST /api/qaqc/standards-lookup/feedback
+  static async submitFeedback(req, res) {
+    const { query, answer_snapshot, feedback_type, reason } = req.body;
+    if (!query || !feedback_type) throw new AppError(400, 'query and feedback_type required');
+    const ALLOWED = ['WRONG_ANSWER', 'MISSING_CITATION', 'WRONG_PAGE', 'OTHER'];
+    if (!ALLOWED.includes(feedback_type)) throw new AppError(400, `feedback_type must be one of: ${ALLOWED.join(', ')}`);
+
+    const { rows } = await pool.query(
+      `INSERT INTO qaqc_ai_feedback (query, answer_snapshot, user_id, feedback_type, reason)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`,
+      [query, answer_snapshot ? JSON.stringify(answer_snapshot) : null, req.user?.id ?? null, feedback_type, reason ?? null]
+    );
+    res.status(201).json({ data: rows[0] });
   }
 
   // GET /api/qaqc/standards-lookup/equivalents
