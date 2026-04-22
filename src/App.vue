@@ -120,6 +120,9 @@
           <!-- Divider -->
           <div class="w-px h-6 bg-gray-200 dark:bg-[#252540] mx-1"></div>
 
+          <!-- Language Switcher -->
+          <LanguageSwitcher />
+
           <!-- User Info & Logout -->
           <div class="flex items-center gap-2 pl-2">
             <router-link to="/system/profile" class="flex items-center gap-2 cursor-pointer transition group" title="Hồ Sơ">
@@ -189,6 +192,7 @@ import { useAuth } from '@/composables/useAuth.js'
 import { apiFetch } from '@/utils/api.js'
 import LoginView from './modules/system/frontend/LoginView.vue';
 import OfflineBanner from './components/OfflineBanner.vue';
+import LanguageSwitcher from './components/LanguageSwitcher.vue';
 
 const isDark = ref(true)
 const menus = ref([])

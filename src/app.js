@@ -4,6 +4,7 @@ import './index.css';
 import App from './App.vue';
 import { loadFrontendModules } from './core/frontend-loader.js';
 import { vCan } from './directives/can.js';
+import { i18n } from './plugins/i18n.js';
 
 export async function createApp(isServer) {
   const app = createSSRApp(App);
@@ -26,5 +27,6 @@ export async function createApp(isServer) {
   });
 
   app.use(router);
+  app.use(i18n);
   return { app, router };
 }

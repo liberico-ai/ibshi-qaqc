@@ -10,6 +10,9 @@ import { SettingsController } from './controllers/SettingsController.js';
 import { SystemInfoController } from './controllers/SystemInfoController.js';
 import { SysLogsController } from './controllers/SysLogsController.js';
 import { ProvidersController } from './controllers/ProvidersController.js';
+import { SignatureController } from './controllers/SignatureController.js';
+import { NotificationPrefsController } from './controllers/NotificationPrefsController.js';
+import { UserPreferencesController } from './controllers/UserPreferencesController.js';
 import { requireAction } from '../../../core/permission.js';
 import { asyncHandler } from '../../../core/errors.js';
 import { validate, required, isString, isArray, minLength } from '../../../core/validate.js';
@@ -31,6 +34,8 @@ export function registerSystemRoutes(app) {
   );
   app.get('/api/system/profile',  requireAction(null), asyncHandler(AuthController.getProfile));
   app.put('/api/system/profile',  requireAction(null), asyncHandler(AuthController.updateProfile));
+  app.get('/api/system/users/me/preferences', requireAction(null), asyncHandler(UserPreferencesController.getMyPreferences));
+  app.put('/api/system/users/me/preferences', requireAction(null), asyncHandler(UserPreferencesController.updateMyPreferences));
   app.get('/api/system/menus',    requireAction(null), asyncHandler(MenusController.getMenus));
 
   // Notifications
@@ -121,6 +126,36 @@ export function registerSystemRoutes(app) {
 
   // MFA — admin reset
   app.post('/api/system/mfa/admin/:userId/reset', requireAction('users.write'), asyncHandler(MFAController.adminResetMFA));
+
+  // Digital Signature
+  app.post('/api/system/signature/enroll-pin',
+    requireAction(null),
+    validate({ pin: [required, isString] }),
+    asyncHandler(SignatureController.enrollPIN)
+  );
+  app.post('/api/system/signature/sign',
+    requireAction(null),
+    validate({ pin: [required, isString], otp_token: [required, isString], entity_type: [required, isString], entity_id: [required, isString] }),
+    asyncHandler(SignatureController.sign)
+  );
+  app.get('/api/system/signature/:entityType/:entityId', requireAction(null), asyncHandler(SignatureController.getSignature));
+  app.post('/api/system/signature/:id/void',
+    requireAction(null),
+    validate({ reason: [required, isString] }),
+    asyncHandler(SignatureController.voidSignature)
+  );
+
+  // Notification Preferences & Channels
+  app.get(   '/api/system/notifications/prefs',                                 requireAction(null), asyncHandler(NotificationPrefsController.getPrefs));
+  app.put(   '/api/system/notifications/prefs',                                 requireAction(null), asyncHandler(NotificationPrefsController.updatePrefs));
+  app.post(  '/api/system/notifications/channels/:channelClass/link/initiate', requireAction(null), asyncHandler(NotificationPrefsController.initiateLink));
+  app.post(  '/api/system/notifications/channels/:channelClass/link/complete', requireAction(null), asyncHandler(NotificationPrefsController.completeLink));
+  app.delete('/api/system/notifications/channels/:channelClass',               requireAction(null), asyncHandler(NotificationPrefsController.unlinkChannel));
+
+  // Outbound Webhooks (admin)
+  app.get(   '/api/system/webhooks',      requireAction('system.providers.read'),  asyncHandler(NotificationPrefsController.listWebhooks));
+  app.post(  '/api/system/webhooks',      requireAction('system.providers.write'), asyncHandler(NotificationPrefsController.createWebhook));
+  app.delete('/api/system/webhooks/:id',  requireAction('system.providers.write'), asyncHandler(NotificationPrefsController.deleteWebhook));
 
   // Providers
   app.get(   '/api/system/providers',          requireAction('system.providers.read'),  asyncHandler(ProvidersController.getAll));
