@@ -51,6 +51,20 @@ export class MIRWorkflowService {
     await mirRepo.transition(mirId, 'DECIDED');
     await hooks.doAction('qaqc.mir.decided', { mirId, decision, userId });
 
+    if (mir.project_id) {
+      await hooks.doAction('qaqc.notification.event', {
+        eventType: decision === 'REJECT' ? 'MIR_REJECTED' : 'MIR_DECIDED',
+        payload: {
+          title: `MIR quyết định: ${decision}`,
+          message: `MIR ${mir.po_ref ?? mirId} đã được quyết định ${decision}${waiverNote ? ' — ' + waiverNote : ''}`,
+          mirId,
+          decision,
+          link: `/qaqc/mir/${mirId}`,
+        },
+        userIds: [userId, mir.created_by].filter(Boolean),
+      });
+    }
+
     return mirRepo.findDetail(mirId);
   }
 }

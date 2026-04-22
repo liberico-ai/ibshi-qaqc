@@ -9,6 +9,7 @@ import CronjobsView from './CronjobsView.vue';
 import SysLogsView from './SysLogsView.vue';
 import AboutView from './AboutView.vue';
 import ProvidersView from './ProvidersView.vue';
+import NotificationSettingsView from './NotificationSettingsView.vue';
 
 export default function registerSystemModule(app, router) {
   router.addRoute({
@@ -33,7 +34,8 @@ export default function registerSystemModule(app, router) {
       { path: 'profile',  name: 'ProfileSettings', component: () => import('./ProfileView.vue') },
       { path: 'mfa',     name: 'MFASetup',        component: () => import('./MFASetupView.vue') },
       { path: 'about',     name: 'SystemAbout',     component: AboutView },
-      { path: 'providers', name: 'SystemProviders', component: ProvidersView }
+      { path: 'providers', name: 'SystemProviders', component: ProvidersView },
+      { path: 'notification-settings', name: 'SystemNotificationSettings', component: NotificationSettingsView }
     ]
   });
 }

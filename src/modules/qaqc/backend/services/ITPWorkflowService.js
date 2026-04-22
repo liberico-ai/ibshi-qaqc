@@ -1,5 +1,13 @@
 import { itpRepo } from '../repositories/ITPRepository.js';
 import { AppError } from '../../../../core/errors.js';
+import { hooks } from '../../../../core/hooks.js';
+
+const EVENT_BY_STATUS = {
+  UNDER_REVIEW:      'ITP_SUBMITTED',
+  MANAGER_APPROVED:  'ITP_APPROVED',
+  DIRECTOR_APPROVED: 'ITP_APPROVED',
+  DRAFT:             'ITP_REJECTED',
+};
 
 const TRANSITIONS = {
   DRAFT:              ['UNDER_REVIEW'],
@@ -24,6 +32,20 @@ export class ITPWorkflowService {
     const snapshot = await itpRepo.findWithItems(planId);
     await itpRepo.saveHistory(planId, plan.version, userId, `Transition to ${targetStatus}`, snapshot);
     await itpRepo.transition(planId, targetStatus, userId);
+
+    const eventType = EVENT_BY_STATUS[targetStatus];
+    if (eventType) {
+      await hooks.doAction('qaqc.notification.event', {
+        eventType,
+        payload: {
+          title: `ITP ${targetStatus}`,
+          message: `ITP ${plan.id} chuyển sang trạng thái ${targetStatus}`,
+          planId,
+          link: `/qaqc/itp/${planId}`,
+        },
+        userIds: [plan.created_by, userId].filter(Boolean),
+      });
+    }
 
     return itpRepo.findOne(planId);
   }

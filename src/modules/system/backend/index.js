@@ -7,27 +7,68 @@ import { auditLog } from '../../../core/audit-log.js';
 import { providerRegistry } from '../../../core/provider-registry.js';
 import { TelegramOTPProvider } from './providers/TelegramOTPProvider.js';
 
+import { channelRegistry } from './services/ChannelRegistry.js';
+import { TelegramChannelProvider } from './providers/TelegramChannelProvider.js';
+import { MattermostChannelProvider } from './providers/MattermostChannelProvider.js';
+import { EmailChannelProvider } from './providers/EmailChannelProvider.js';
+import { providersRepo } from './repositories/ProvidersRepository.js';
+import { notificationChannelRepo } from './repositories/NotificationChannelRepository.js';
+import { createLogger } from '../../../core/logger.js';
+
+const log = createLogger('system-module');
+
+async function loadChannelConfig(className) {
+  try {
+    const rows = await providersRepo.findByClassName(className);
+    if (!rows[0]) return null;
+    const record = rows[0];
+    let cfg = {};
+    if (record.config) {
+      try {
+        cfg = JSON.parse(SettingsService._decrypt(record.config));
+      } catch { /* ignore */ }
+    }
+    return cfg;
+  } catch (err) {
+    log.warn({ err: err.message, className }, 'Failed to load channel config');
+    return null;
+  }
+}
+
 export default async function registerSystemModule(app) {
-  // 1. Phân quyền: Đăng ký các quyền hạn (Actions/Permissions) mà module này có
   registerSystemActions();
 
-  // MFA delivery providers
   providerRegistry.register('TelegramOTPProvider', TelegramOTPProvider, 'mfa', 'Gửi HOTP qua Telegram bot');
+  providerRegistry.register('notification-telegram',   TelegramChannelProvider,   'system', 'Telegram notification channel');
+  providerRegistry.register('notification-mattermost', MattermostChannelProvider, 'system', 'Mattermost notification channel');
+  providerRegistry.register('notification-email',      EmailChannelProvider,      'system', 'Email notification channel (stub)');
 
-  // 2. Menu: Đăng ký các menu của module này
   registerSystemMenus();
-
-  // 3. Định tuyến: Tích hợp Controller & API của module vào Express App
   registerSystemRoutes(app);
-
-  // 4. Cronjobs: Đăng ký các tiến trình chạy ngầm
   registerSystemCronjobs();
 
-  // 5. Đồng bộ cấu hình audit log từ DB khi khởi động
   try {
     const { data } = await SettingsService.getAllSettings();
     auditLog.syncFromSettings(data);
   } catch {
-    // DB chưa sẵn sàng (first run) — dùng default
+    // DB chưa sẵn sàng
+  }
+
+  try {
+    const telegramCfg = await loadChannelConfig('notification-telegram');
+    if (telegramCfg) {
+      await channelRegistry.register('notification-telegram', TelegramChannelProvider, telegramCfg,
+        async (chatId, code) => notificationChannelRepo.completeLinkByCode('notification-telegram', code, chatId));
+    }
+    const mattermostCfg = await loadChannelConfig('notification-mattermost');
+    if (mattermostCfg) {
+      await channelRegistry.register('notification-mattermost', MattermostChannelProvider, mattermostCfg);
+    }
+    const emailCfg = await loadChannelConfig('notification-email');
+    if (emailCfg) {
+      await channelRegistry.register('notification-email', EmailChannelProvider, emailCfg);
+    }
+  } catch (err) {
+    log.warn({ err: err.message }, 'Channel registration skipped — DB not ready or no active channels');
   }
 }

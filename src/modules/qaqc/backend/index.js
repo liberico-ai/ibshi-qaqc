@@ -12,6 +12,8 @@ import { AIStandardsLookupProvider } from './providers/AIStandardsLookupProvider
 import { AIMTCCrossCheckProvider }   from './providers/AIMTCCrossCheckProvider.js';
 import { hooks }                     from '../../../core/hooks.js';
 import { WebhookOutboundService }    from './services/WebhookOutboundService.js';
+import { startStandardsImportWorker } from './workers/standardsImportWorker.js';
+import { eventDispatch }             from '../../system/backend/services/EventDispatchService.js';
 
 export default async function registerQAQCModule(app) {
   // 1. Register provider classes
@@ -28,8 +30,17 @@ export default async function registerQAQCModule(app) {
   registerQAQCRoutes(app);
   registerQAQCCronjobs();
 
-  // 3. Outbound webhook hook: fire after MIR decision
+  // 3. Start background workers
+  startStandardsImportWorker();
+
+  // 4. Outbound webhook hook: fire after MIR decision
   hooks.addAction('qaqc.mir.decided', async ({ mirId, decision }) => {
     await WebhookOutboundService.send('mir.decided', { mir_id: mirId, decision });
+  });
+
+  // 5. Multi-channel notification dispatcher — channel-agnostic
+  hooks.addAction('qaqc.notification.event', async ({ eventType, payload, userIds }) => {
+    if (!eventType || !userIds?.length) return;
+    await eventDispatch.dispatch(eventType, payload, userIds);
   });
 }
