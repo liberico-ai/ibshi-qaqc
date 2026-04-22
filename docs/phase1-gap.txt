@@ -1,0 +1,653 @@
+IBS HEAVY INDUSTRY
+QA/QC PLATFORM
+GIẢI THÍCH CHI TIẾT 10 CRITICAL GAPS
+Tại sao cần, tính năng cần có, User Story, Acceptance Criteria
+Phụ lục báo cáo Audit v1.0
+Ngày: 20/04/2026
+Đối tượng: Product Owner, Dev Team Lead, Giám đốc QA/QC
+
+Tổng quan 10 Gap
+Dưới đây là tóm tắt 10 gap nghiêm trọng đã phát hiện trong báo cáo audit. Mỗi gap sẽ được giải thích chi tiết ở các trang tiếp theo, với bối cảnh thực tế, tính năng cần xây dựng, User Story và Acceptance Criteria để Dev team có thể ước lượng và triển khai.
+#	Gap	Ưu tiên	Effort	Tham chiếu BRD
+1	Offline Queue 2 giờ	P0 — Must	3 ngày	BR08.04, NFR-AV-02
+2	MFA (Multi-Factor Authentication)	P0 — Must	2 ngày	NFR-SEC-01
+3	Digital Signature (PIN + OTP)	P0 — Must	3 ngày	BR07.04, BR05.08
+4	Hold Point Enforcement	P0 — Must	2 ngày	BR02.03
+5	Standards Bulk Import Pipeline	P1 — Should	3 ngày	BR09.01
+6	Validation Layer (Joi/Zod)	P1 — Should	2 ngày	NFR-SEC-03
+7	AI-1 Citation với page/section chính xác	P1 — Should	2 ngày	BR09.03, AC09.02
+8	Real-time Notification (Telegram/Webhook)	P2 — Could	2 ngày	INT-05, INT-06
+9	Inspection Revision Versioning	P2 — Could	1 ngày	BR02.06
+10	i18n VN/EN	P2 — Could	1 ngày	NFR-USE-01
+
+Tổng effort: ~21 ngày dev (1 người) hoặc ~2 tuần với team 2 người làm song song.
+P0 = phải có trước UAT để nghiệm thu Phase 1. P1 = cần có trước go-live Pilot mở rộng. P2 = có thể đưa vào Phase 2.
+
+Gap #1: Offline Queue 2 giờ
+Mã BRD tham chiếu: BR08.04, NFR-AV-02   •   Ưu tiên: P0 — Must   •   Effort: 3 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Anh Tuấn — QC Inspector tại xưởng chế tạo bồn áp lực 450m³ của dự án Nghi Sơn.
+7h30 sáng: Tuấn mở tablet, vào Inspection Task list, thấy 8 task cần check hôm nay (fit-up, hàn root pass, UT cho 3 mối hàn chính).
+9h15: Đang điền Inspection Form cho task IP-03 Root Pass Visual — đã nhập xong 6/8 trường số đo, chụp 4 ảnh, còn 2 trường nữa. Đột nhiên tablet báo "Mất kết nối Wi-Fi công trình" (router xưởng bị reboot).
+Hiện trạng: 20 phút công gõ tay + 4 ảnh bay sạch. Tuấn phải quay về văn phòng chờ mạng, mở lại form trống, làm lại từ đầu.
+Xảy ra trung bình 2-3 lần/tuần với mỗi inspector. Tổng cộng team 12 QC-INS mất khoảng 40-60 giờ công/tháng vì mất mạng.
+Tại sao cần tính năng này
+    • Công trình chế tạo cơ khí nặng (shipyard, refinery, FPSO yard) thường ở khu công nghiệp ven biển, điều kiện mạng không ổn định.
+    • Wi-Fi công trình hay bị reboot do nguồn điện hàn công suất lớn, 4G đôi khi mất sóng do kết cấu thép dày che tín hiệu.
+    • Công việc QC Inspector không thể chờ mạng — có Witness Point phải nghiệm thu ngay lúc đó, sau 15 phút đã mất hiện trạng.
+    • BRD đã quy định "Offline tolerance 2 giờ" — nghĩa là nếu mạng ổn định trở lại trong 2h, toàn bộ thao tác phải sync được không mất dữ liệu.
+    • Chữ ký điện tử + audit log vẫn phải có thời gian thực (timestamp server) — nên không thể cho offline vô hạn. 2h là ngưỡng cân bằng giữa UX và tính pháp lý.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. CLIENT-SIDE PERSISTENCE (IndexedDB):
+   • Auto-save form draft mỗi 30 giây vào IndexedDB của trình duyệt/PWA.
+   • Lưu cả attachment (ảnh nén WebP ~200KB/ảnh) vào IndexedDB Blob store.
+   • Key: {userId}_{entityType}_{entityId}_{timestamp}
+
+2. REQUEST QUEUE (Service Worker):
+   • Intercept fetch() calls qua Service Worker.
+   • Nếu network fail: lưu request vào IndexedDB queue với timestamp, payload, retry count.
+   • Khi online trở lại: flush queue theo FIFO, exponential backoff nếu server 5xx.
+
+3. UI INDICATORS:
+   • Banner màu cam ở top: "Đang offline — 3 thao tác chờ đồng bộ"
+   • Icon 🟢/🟡/🔴 realtime bên cạnh nút Submit.
+   • Toast "Đã đồng bộ" khi sync xong.
+   • Warning "Hết hạn offline (2h), vui lòng đăng nhập lại" khi vượt ngưỡng.
+
+4. CONFLICT RESOLUTION:
+   • Mỗi record có version number (optimistic locking).
+   • Nếu server version > client version khi submit: hiển thị dialog "Record đã bị update bởi <user X> lúc <T>. Chọn: ghi đè / huỷ / merge thủ công".
+
+5. EXPIRY & AUDIT:
+   • Queue item > 2h: tự động invalidate, bắt user login lại.
+   • Khi sync thành công: ghi audit log với flag offline_synced=true, client_timestamp + server_timestamp.
+User Stories
+    • Là QC Inspector, tôi muốn tiếp tục điền form khi mất mạng, để không phải làm lại từ đầu khi Wi-Fi có trở lại.
+    • Là QC Inspector, tôi muốn được báo rõ đang offline và có bao nhiêu thao tác chờ, để biết tình trạng dữ liệu của mình.
+    • Là QC Manager, tôi muốn audit log phân biệt được thao tác online vs offline-synced, để đánh giá độ tin cậy của timestamp.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC1.1: Khi mất kết nối, form vẫn cho phép nhập và Submit. Dữ liệu lưu trong IndexedDB.
+    • AC1.2: Khi có mạng trở lại trong vòng 2h, toàn bộ thao tác pending được sync đúng thứ tự, không mất record nào.
+    • AC1.3: Nếu offline > 2h: hệ thống hiển thị cảnh báo, xóa local queue, buộc user re-authenticate.
+    • AC1.4: Audit log ghi nhận phân biệt thao tác offline-synced với offline_synced=true.
+    • AC1.5: Ảnh chụp trong khi offline vẫn giữ EXIF (timestamp, GPS) gốc khi upload.
+Phụ thuộc (Dependencies)
+    • Service Worker support (modern browsers — Chrome/Edge/Safari từ 2020).
+    • Backend endpoint /audit/log phải chấp nhận client_timestamp + server_timestamp separately.
+    • Cần refactor các Inspection form hiện tại để save state sang IndexedDB thay vì chỉ trong Vue state.
+
+Gap #2: MFA — Multi-Factor Authentication
+Mã BRD tham chiếu: NFR-SEC-01   •   Ưu tiên: P0 — Must   •   Effort: 2 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Chị Hương — QC Manager dự án Formosa, có quyền Approve ITP, duyệt NCR, quyết định MIR ACCEPT/REJECT.
+Một ngày chị để quên laptop trong phòng họp 30 phút. Laptop ở chế độ login sẵn.
+Kịch bản xấu: bất kỳ ai vào phòng đó có thể thao tác với quyền của chị Hương, bao gồm Approve ITP giả, tạo NCR giả, hoặc lấy thông tin dự án nhạy cảm.
+Kịch bản xấu hơn: mật khẩu bị leak qua email lừa đảo — attacker truy cập từ xa, toàn bộ traceability chain bị compromise, dữ liệu audit trở nên không còn pháp lý.
+Đây là hệ thống lưu evidence pháp lý — khách hàng dầu khí (PVN, VSP, PTSC) và bên thứ 3 (LR, BV, DNV) có thể yêu cầu audit bất cứ lúc nào. Một sự cố MFA là sẽ mất uy tín lâu dài.
+Tại sao cần tính năng này
+    • QA/QC data là evidence pháp lý theo ASME Section V, IX và Ordinance 106/2017/NĐ-CP. Compromise = vô giá trị hồ sơ.
+    • Khách hàng EPC thường require MFA trong Contract QA/QC clause (LR/BV/DNV audit checklist hỏi rõ điều này).
+    • NFR-SEC-01 trong BRD đã yêu cầu "MFA bắt buộc cho roles có quyền Approve/Sign".
+    • Chi phí MFA rất thấp so với rủi ro: Google Authenticator free, user mất ~10s nhập OTP mỗi lần login.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. TOTP (Time-based One-Time Password):
+   • Chuẩn RFC 6238, tương thích Google Authenticator, Microsoft Authenticator, Authy.
+   • Dùng thư viện otplib (Node.js).
+
+2. ENROLLMENT FLOW:
+   • User vào Profile → Security → Enable MFA.
+   • Server sinh secret (base32), trả về QR code.
+   • User scan QR bằng app Authenticator, app hiển thị 6-digit OTP.
+   • User nhập OTP để xác nhận enrollment thành công.
+   • Server issue 10 backup codes (one-time use) — user download/in ra cất giữ.
+
+3. LOGIN FLOW:
+   • Step 1: nhập email + password như cũ → trả về partial token.
+   • Step 2: prompt OTP 6-digit. Verify TOTP với window ±30s.
+   • Step 3: nếu đúng → cấp full JWT access + refresh token.
+   • Nếu dùng backup code thay OTP: invalidate code đó.
+
+4. POLICY ENFORCEMENT:
+   • MFA BẮT BUỘC cho roles: QC-DIR, QC-MGR, SYS-ADM, MDR-CMP.
+   • MFA tuỳ chọn (có thể bắt buộc theo dự án) cho: WLD-ENG, NDT-COR.
+   • MFA khuyến nghị cho: QC-INS, MAT-REC.
+
+5. RECOVERY:
+   • Lost device flow: user liên hệ SYS-ADM, cung cấp backup code hoặc xác thực qua email công ty.
+   • SYS-ADM có thể reset MFA enrollment cho user khác với reason mandatory → audit log.
+User Stories
+    • Là QC Director, tôi muốn tài khoản được bảo vệ 2 lớp, để tin tưởng mọi thao tác duyệt ITP đều do chính tôi thực hiện.
+    • Là SYS-ADM, tôi muốn reset MFA được cho user mất device, nhưng với quy trình có audit log và lý do rõ ràng.
+    • Là QC Manager, tôi muốn có backup codes để phòng khi điện thoại hết pin ra công trình.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC2.1: Roles P0 (QC-DIR, QC-MGR, SYS-ADM, MDR-CMP) phải enroll MFA trong vòng 7 ngày kể từ deploy, nếu không → không login được.
+    • AC2.2: Flow enrollment: QR code hiển thị, scan thành công, nhập OTP test → kích hoạt.
+    • AC2.3: Flow login: bước 2 yêu cầu OTP, verify TOTP với window ±30s. Sai 3 lần trong 10 phút → lock account 15 phút.
+    • AC2.4: 10 backup codes được cấp, mỗi code dùng 1 lần. Khi dùng hết → prompt user tạo bộ mới.
+    • AC2.5: SYS-ADM reset MFA cho user khác: yêu cầu nhập lý do, record vào audit log với tên người reset + người bị reset.
+Phụ thuộc (Dependencies)
+    • Thư viện otplib (npm).
+    • UI cần thêm màn hình Profile → Security.
+    • Tài liệu hướng dẫn user cài Authenticator app.
+
+Gap #3: Digital Signature (PIN + OTP)
+Mã BRD tham chiếu: BR07.04, BR05.08   •   Ưu tiên: P0 — Must   •   Effort: 3 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Anh Đức — QC Director, cần ký close-out MIR số MIR-2026-0458 cho lô thép SA516 Gr.70 nhập về dự án Nhơn Hội.
+Theo quy trình hiện tại (giấy): anh Đức ký tay vào form MIR, đóng dấu phòng QA/QC. Chữ ký này đi kèm hồ sơ bàn giao khách, có giá trị pháp lý.
+Khi chuyển sang hệ thống số: nếu chỉ click nút "Approve", chưa đủ tính pháp lý. Cần cơ chế ký số chứng minh: (a) đúng người ký, (b) đúng thời điểm, (c) không thể chối bỏ (non-repudiation), (d) không thể sửa sau khi ký.
+Tương tự cho NCR close-out: khi QC-MGR duyệt "Accept Disposition" cho một NCR, cần ký số. Nếu sau này có tranh chấp với khách hàng về một lô hàng có vấn đề, chữ ký số này là bằng chứng không thể bẻ cãi.
+Tại sao cần tính năng này
+    • MIR và NCR close-out là 2 điểm pháp lý then chốt của hệ thống QA/QC — đều cần "evidentiary signature" (chữ ký có giá trị bằng chứng).
+    • Theo Nghị định 130/2018/NĐ-CP về chữ ký số: chữ ký phải ràng buộc duy nhất với người ký, có timestamp, không thể giả mạo.
+    • Cơ chế PIN + OTP đạt mức "Advanced Electronic Signature" (AdES) — đủ cho mục đích nội bộ và khách hàng EPC.
+    • Không được dùng PKI/SSL-cert vì chi phí cao và khó quản lý — PIN+OTP là balance hợp lý.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. PIN SETUP (one-time):
+   • User enroll PIN 6 digit lần đầu (khi được gán role cần ký số).
+   • Lưu: hash(PIN + user_salt) bằng argon2id — không bao giờ lưu PIN plain.
+   • Có flow reset PIN qua email + MFA (nhưng không phải SYS-ADM reset — để tránh insider risk).
+
+2. SIGNATURE CEREMONY:
+   • User nhấn "Close MIR" (hoặc "Close NCR", "Approve ITP Director-level").
+   • Modal dialog: hiển thị nội dung tóm tắt sẽ ký (số MIR, vật tư, decision).
+   • Ô 1: nhập PIN 6-digit.
+   • Ô 2: nhập OTP 6-digit (từ Authenticator app — cùng app MFA).
+   • Checkbox: "Tôi xác nhận đã đọc, hiểu và chịu trách nhiệm với chữ ký này."
+   • Nút Confirm.
+
+3. SIGNATURE RECORD:
+   • Server verify PIN (argon2 compare) + verify OTP (TOTP).
+   • Nếu OK: compute SHA-256 hash of document canonical JSON.
+   • Lưu bảng sys_signatures: {id, user_id, entity_type, entity_id, doc_hash, signed_at, ip, user_agent, pin_verified=true, otp_verified=true, method="PIN+OTP"}.
+   • Bảng này APPEND-ONLY (DB trigger từ chối UPDATE/DELETE).
+   • Entity (MIR/NCR/ITP) set flag is_signed=true, signature_id=<id>.
+
+4. VERIFICATION UI:
+   • Bên cạnh tên người ký: hiển thị icon shield xanh "✓ Signed".
+   • Hover: popup hiển thị signed_at, IP, method.
+   • Trong MDR export: embed signature certificate dạng PDF/A-3.
+
+5. POST-SIGN PROTECTION:
+   • Entity đã signed KHÔNG cho phép update. Muốn sửa: phải unsign (với reason, audit log) hoặc tạo Revision mới.
+   • Unsign chỉ được thực hiện bởi 1 level cao hơn (MIR signed by QC-MGR → chỉ QC-DIR mới unsign được).
+User Stories
+    • Là QC Director, khi ký MIR close-out, tôi muốn có chữ ký số có giá trị pháp lý để khi xuất hồ sơ bàn giao khách không bị hỏi lại.
+    • Là Auditor bên khách, tôi muốn verify được chữ ký trên MIR là của đúng người, đúng thời điểm, không bị sửa sau khi ký.
+    • Là QC Manager, tôi muốn ký NCR close-out chỉ trong 10 giây, không phải quy trình rườm rà.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC3.1: User enroll PIN 6-digit lần đầu, lưu hash bằng argon2id.
+    • AC3.2: Signature ceremony yêu cầu PIN + OTP, verify thành công mới record.
+    • AC3.3: sys_signatures bảng APPEND-ONLY — DB trigger reject UPDATE/DELETE.
+    • AC3.4: Entity đã signed: hiển thị badge "Signed by X at T" + icon ✓.
+    • AC3.5: Thử sửa entity đã signed: backend reject với 403 "Document is signed, must unsign or create revision first".
+    • AC3.6: Unsign yêu cầu role cao hơn + reason + audit log.
+    • AC3.7: Export MDR chứa signature info dạng readable (tên, thời gian, hash).
+Phụ thuộc (Dependencies)
+    • Gap #2 (MFA) phải có trước — vì OTP component tái sử dụng.
+    • argon2 library (đã có trong package.json).
+    • DB migration cho bảng sys_signatures + trigger.
+
+Gap #4: Hold Point Enforcement
+Mã BRD tham chiếu: BR02.03   •   Ưu tiên: P0 — Must   •   Effort: 2 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Dự án PFSB — bồn chứa LPG. ITP-PFSB-001 có 10 Inspection Points:
+   IP01 Material Incoming (Hold)
+   IP02 Fit-up (Witness)
+   IP03 Root Pass (Hold)
+   IP04 Fill Pass (Witness)
+   IP05 Visual Weld (Witness)
+   IP06 UT (Hold)
+   IP07 PWHT (Hold by Customer)
+   IP08 Hydrostatic Test (Hold)
+   IP09 Painting (Witness)
+   IP10 Final Inspection (Hold)
+
+Theo quy định ASME + Contract: Hold Point BẮT BUỘC dừng sản xuất, phải có QC-DIR hoặc customer rep release mới đi tiếp.
+Kịch bản rủi ro: công nhân hàn đã làm Root Pass, QC Inspector định submit Fill Pass luôn. Nhưng Root Pass (IP03) là Hold Point chưa được release. Nếu Fill Pass chồng lên, không ai phát hiện lỗi Root Pass (crack, lack of fusion), đến khi Hydrostatic Test mới phát hiện — lúc đó phải cắt toàn bộ để repair, thiệt hại hàng tỉ đồng.
+Hệ thống hiện tại CÓ flag H/W trong ITP, nhưng chưa chặn Inspection kế tiếp — hoàn toàn dựa vào ý thức người dùng. Đây là lỗ hổng nghiêm trọng nhất về nghiệp vụ.
+Tại sao cần tính năng này
+    • Đây là lý do tồn tại của ITP — không enforce Hold Point = ITP chỉ là giấy.
+    • Contract với khách hàng EPC luôn yêu cầu Hold Point là mandatory stop.
+    • Nếu bỏ qua Hold Point mà có sự cố → IBSHI mất Certificate ISO 3834, ASME U-stamp → mất thị trường.
+    • BRD BR02.03 đã quy định rõ: "System SHALL block progression to next IP if prior H-point not released."
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. ITP CONFIGURATION:
+   • Mỗi IP row trong ITP có field `hold_type` enum: NONE, W (Witness), H (Hold-internal), HC (Hold-Customer).
+   • Hold Point có field `release_required_by_role`: [QC-MGR, QC-DIR, CUSTOMER].
+
+2. DEPENDENCY GRAPH:
+   • Khi active ITP: build DAG theo thứ tự IP (topological order).
+   • Lưu ip_dependencies table: {ip_id, depends_on_ip_id}.
+
+3. BLOCKING MIDDLEWARE:
+   • Khi tạo mới Inspection Task cho IP(n): query tất cả IP(k) với k < n có hold_type IN (H, HC).
+   • Nếu tồn tại IP(k) chưa có RELEASED signature: RETURN 409 Conflict với payload:
+     {error: "HOLD_POINT_NOT_RELEASED", blocking: ["IP03"], message: "IP03 Root Pass is Hold Point, not released yet"}
+   • Middleware cũng chạy khi Submit Inspection form — chặn submit nếu có H-point pending.
+
+4. RELEASE FLOW:
+   • QC-MGR/DIR/Customer vào IP detail view, nhấn "Release Hold".
+   • Yêu cầu: Digital Signature (Gap #3) + comment mandatory.
+   • Ghi ip_releases table: {ip_id, released_by, released_at, comment, signature_id}.
+   • Notification gửi tới QC-INS liên quan: "IP03 đã released, bạn có thể tiếp tục IP04".
+
+5. OVERRIDE (exceptional):
+   • Chỉ QC-DIR mới có quyền override Hold Point (bypass enforcement).
+   • Yêu cầu: reason dài ≥ 50 ký tự, signature, log tới bảng sys_overrides.
+   • Notification tới toàn ban: "QC-DIR đã override Hold Point IP03 vì lý do X".
+   • Báo cáo tuần: list tất cả override → review.
+
+6. UI INDICATORS:
+   • ITP detail view: hiển thị trạng thái mỗi IP: 🟢 Released / 🟡 In Progress / 🔴 Hold-Pending / ⛔ Blocked.
+   • Inspection list: task bị block hiển thị grayed-out, hover: "Blocked by IP03".
+User Stories
+    • Là QC Inspector, tôi muốn hệ thống ngăn tôi submit IP04 nếu IP03 chưa released, để không bỏ sót Hold Point.
+    • Là QC Director, tôi muốn release Hold Point một cách rõ ràng, có trách nhiệm, để chịu trách nhiệm với quyết định đó.
+    • Là QC Manager, tôi muốn biết ngay có bao nhiêu Hold Point đang pending trong dự án, để ưu tiên release.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC4.1: ITP có ít nhất 1 IP với hold_type = H, tạo Inspection Task cho IP kế tiếp: backend reject 409.
+    • AC4.2: QC-DIR nhấn Release Hold: yêu cầu signature + comment ≥ 20 ký tự. Release xong, IP kế tiếp unblock.
+    • AC4.3: Override Hold Point chỉ QC-DIR làm được, yêu cầu reason ≥ 50 ký tự, record vào sys_overrides.
+    • AC4.4: Dashboard hiển thị badge "3 Hold Points Pending" cho QC-MGR khi có > 0 H-point chưa release trong dự án của mình.
+    • AC4.5: Weekly report tự động gửi list override tuần trước — hoặc "Không có override" nếu không có.
+Phụ thuộc (Dependencies)
+    • Gap #3 (Digital Signature) cho release ceremony.
+    • ITP data model: đã có field hold_type (đang dùng làm flag) — cần enforcement logic.
+
+Gap #5: Standards Bulk Import Pipeline
+Mã BRD tham chiếu: BR09.01   •   Ưu tiên: P1 — Should   •   Effort: 3 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Chị Lan — Document Controller phòng QA/QC, chịu trách nhiệm cập nhật kho tiêu chuẩn.
+Công ty mua license ASME 2023 Edition — gồm 12 Sections, mỗi Section là 1 PDF 800-2000 trang. Tổng khoảng 15.000 trang.
+Hiện trạng: chị Lan phải upload từng PDF một qua UI admin, mỗi file phải bấm Upload, chờ OCR, chờ chunking, chờ embedding — mỗi file mất 15-30 phút. Tổng ~6 giờ cho 12 files, và phải ngồi trông màn hình.
+Vấn đề thêm: nếu một file lỗi giữa chừng (PDF parsing fail), quy trình dừng, phải xóa rồi upload lại. Không có rollback clean, đôi khi có chunks lạc vào vector store gây nhiễu kết quả AI-1 Lookup.
+Công ty cần nạp nhiều bộ: ASME, AWS, API, ISO, EN, DIN, JIS, TCVN… Tổng khoảng 200+ tài liệu. Không thể tiếp tục làm tay.
+Tại sao cần tính năng này
+    • AI-1 Standards Lookup chỉ hữu ích nếu kho dữ liệu đầy đủ và cập nhật.
+    • Tiêu chuẩn có phiên bản mới hàng năm (2019, 2021, 2023...) — cần workflow thay thế/supersede clean.
+    • BR09.01: "System SHALL support bulk import of standards with metadata extraction and vector indexing."
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. ADMIN BULK UPLOAD UI:
+   • Drop zone: drag-drop nhiều PDF hoặc 1 file ZIP chứa nhiều PDF.
+   • Form metadata mặc định: Standard family (ASME/AWS/...), Year, Language.
+   • Nút "Start Import" khởi chạy pipeline async.
+
+2. IMPORT PIPELINE (background job với node-cron/BullMQ):
+   • Step A: Validate PDF (check pages, not corrupted).
+   • Step B: Extract metadata — parse cover page để lấy Title, Section code, Year (regex + heuristics).
+   • Step C: Chunking — split theo section/subsection headers (pattern "Section X.Y", "Art. Z.Z"), fallback to 500-token overlap chunks.
+   • Step D: Metadata tagging — mỗi chunk có {standard_code, section, subsection, page_start, page_end, language}.
+   • Step E: Embedding generation — call Gemini embedding API (hoặc OpenAI text-embedding-3) cho từng chunk.
+   • Step F: Upsert vào pgvector (hoặc Qdrant): (chunk_id, vector, metadata, text).
+   • Step G: Ghi bảng standards_documents với status=INDEXED.
+
+3. PROGRESS TRACKING:
+   • Admin UI hiển thị bảng các file đang process với progress % và status: QUEUED / EXTRACTING / CHUNKING / EMBEDDING / DONE / FAILED.
+   • Websocket/polling mỗi 5s để update.
+
+4. ERROR HANDLING:
+   • Mỗi step lỗi: ghi error log, retry up to 3 lần.
+   • Nếu fail hẳn: mark file FAILED, giữ error message, cho phép admin "Retry".
+   • Rollback: xóa tất cả chunks của file đã fail khỏi vector store (transaction-safe).
+
+5. SUPERSEDE WORKFLOW:
+   • Khi import ASME 2023 mà đã có ASME 2021: popup "Do you want to supersede ASME 2021?".
+   • Nếu Yes: ASME 2021 chuyển status SUPERSEDED, excluded khỏi search mặc định nhưng vẫn query được nếu user chọn "include historical".
+
+6. MONITORING:
+   • Dashboard: Tổng số standards, số chunks, vector DB size, throughput embedding/min.
+   • Alert khi embedding API fail rate > 5% trong 10 phút.
+User Stories
+    • Là Document Controller, tôi muốn upload 1 ZIP 12 files PDF cùng lúc, rồi quay lại sau 2 giờ thấy đã index xong, để không phải ngồi trông.
+    • Là System Admin, tôi muốn thấy status rõ ràng file nào fail, với lý do cụ thể, để xử lý.
+    • Là Welding Engineer, tôi muốn AI Lookup trả lời chính xác từ bộ ASME 2023 ngay sau khi Doc Controller import xong.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC5.1: Upload ZIP 10 PDFs → pipeline process async, hiển thị progress từng file.
+    • AC5.2: File OK → vector store có chunks với metadata đầy đủ (standard_code, section, page).
+    • AC5.3: File FAIL → file status=FAILED với error message readable; chunks không bị leak vào vector store.
+    • AC5.4: Khi import version mới cùng standard: prompt Supersede với 3 option (Yes/No/Keep both).
+    • AC5.5: AI Lookup query sau import: trả về chunks từ standard mới import với citation đúng page.
+    • AC5.6: Pipeline xử lý 15.000 trang trong < 4 giờ (benchmark).
+Phụ thuộc (Dependencies)
+    • pgvector extension đã install trong PostgreSQL (migration 006 đã có base).
+    • API key Gemini (hoặc OpenAI) — cần mua license hoặc dùng embedding open-source (BGE-m3).
+    • Background job queue — đang có node-cron, cần upgrade lên BullMQ cho heavy jobs.
+
+Gap #6: Validation Layer (Joi/Zod)
+Mã BRD tham chiếu: NFR-SEC-03   •   Ưu tiên: P1 — Should   •   Effort: 2 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Hiện trạng: frontend Vue có validation (required, maxLength, regex…). Nhưng backend controllers (ITPController, InspectionController, MIRController…) KHÔNG validate — chỉ cast kiểu và insert DB.
+Kịch bản xấu: attacker gọi API bằng Postman/curl, bỏ qua UI. Có thể gửi: ITP với heading null, Inspection với measurement_value = "abc" (không phải number), MIR với grade chứa SQL injection payload.
+Không có validation layer = backend trusts client input = XSS, SQL injection, NoSQL injection, type confusion đều thành rủi ro.
+Ngoài bảo mật, thiếu validation còn gây dữ liệu bẩn: null ở cột not-null, enum giá trị lạ, date sai format — gây crash ở các báo cáo / MDR export về sau.
+Tại sao cần tính năng này
+    • Security best practice: "Never trust user input" — backend phải validate độc lập.
+    • NFR-SEC-03: "All input validated against schema before processing."
+    • Tránh dirty data — data quality là yếu tố sống còn với hệ thống QA/QC evidence.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. FRAMEWORK:
+   • Chọn Zod (TypeScript-friendly, nhẹ, expressive) hoặc Joi (mature, many plugins).
+   • Khuyến nghị Zod vì repo đang JS nhưng có thể migrate TS sau.
+
+2. SCHEMA PER ENDPOINT:
+   • Mỗi route có file schema: routes/itp.routes.js → schemas/itp.schema.js.
+   • Schema cho body, query, params riêng.
+   • Ví dụ createITP:
+     z.object({
+       project_id: z.string().uuid(),
+       name: z.string().min(3).max(200),
+       description: z.string().max(2000).optional(),
+       rows: z.array(z.object({...})).min(1).max(50),
+     })
+
+3. MIDDLEWARE:
+   • validate(schema) wraps route handler.
+   • Nếu fail: return 400 với detailed errors (field + message).
+   • Nếu pass: parsed + coerced data available via req.validated.
+
+4. COMMON SCHEMAS:
+   • Shared validators: UUID, ISO date, IP code (regex IP\d{2}), heat number, project role enum.
+   • Custom refinements: heat_number phải unique, ITP state transition hợp lệ.
+
+5. ERROR RESPONSE FORMAT:
+   • Tiêu chuẩn RFC 7807 Problem Details:
+     {type: "/errors/validation", title: "Validation Failed",
+      status: 400, errors: [{field: "rows[3].accept_value", msg: "required"}]}
+
+6. AUDIT LOG CHO VIPOLATIONS:
+   • Log các request fail validation với suspicious pattern (SQL keywords, XSS script tags).
+   • Alert SYS-ADM nếu cùng 1 user gửi > 10 validation-fail trong 1 phút → có thể attack.
+User Stories
+    • Là Dev, tôi muốn mỗi endpoint có schema rõ ràng, để không phải check if/else rải rác trong controller.
+    • Là Security Officer, tôi muốn audit log thấy được các request đáng ngờ, để điều tra insider threats.
+    • Là QC Inspector, tôi muốn hệ thống báo lỗi cụ thể field nào sai khi submit form, không chỉ "Something went wrong".
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC6.1: Tất cả POST/PUT endpoints có validation schema.
+    • AC6.2: Request không hợp lệ → 400 với chi tiết field errors.
+    • AC6.3: SQL injection payload ("; DROP TABLE...") trong text field → reject 400, log alert.
+    • AC6.4: XSS payload ("<script>") trong note fields → reject hoặc sanitize (HTML escape).
+    • AC6.5: Request valid: parsed data đi qua req.validated, không để lẫn với req.body raw.
+    • AC6.6: Coverage: 100% endpoints trong modules qaqc + system.
+
+Gap #7: AI-1 Citation với page/section chính xác
+Mã BRD tham chiếu: BR09.03, AC09.02   •   Ưu tiên: P1 — Should   •   Effort: 2 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Anh Phúc — Welding Engineer hỏi AI Lookup: "Yêu cầu preheat cho SA-516 Gr.70 thickness 25mm theo ASME IX là bao nhiêu?"
+AI hiện trả lời: "Theo ASME Section IX, yêu cầu preheat cho SA-516 Gr.70 độ dày 25mm là tối thiểu 79°C (175°F). Citation: ASME Section IX."
+Vấn đề: citation chỉ nói "ASME Section IX" — nhưng ASME IX có ~800 trang, làm sao anh Phúc verify? Phải tự lục tay mất 30 phút.
+Hoặc tệ hơn: AI bịa số 79°C (đúng thực tế có thể khác, phải tra QW-290 Table QW-451 với P-No, thickness…). Anh Phúc tin AI, dùng 79°C để chỉ đạo công nhân hàn, sau này NDT phát hiện crack.
+Citation phải chỉ đích danh: "ASME BPVC Section IX 2023 Edition, Table QW-252.1, Row P-No.1, Thickness 19mm-38mm, Page 142."
+Tại sao cần tính năng này
+    • AC09.02: "Every AI answer MUST include citation with standard code, section, page, and confidence score."
+    • Không có citation chính xác = AI answer không verifiable = không dùng được cho mục đích kỹ thuật.
+    • Responsible AI principle: human-in-the-loop cần có evidence để verify.
+    • Khách hàng EPC có thể audit AI answer trong MDR — nếu citation mơ hồ, sẽ reject.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. METADATA ENRICHMENT KHI INDEX:
+   • PDF parser (pdf-parse hoặc Unstructured.io) extract: page_number, section_header, paragraph_number.
+   • Structured chunk:
+     {
+       standard_code: "ASME-BPVC-IX-2023",
+       section: "QW-290",
+       subsection: "QW-290.1",
+       table: "QW-252.1",
+       page: 142,
+       text: "...",
+       embedding: [...]
+     }
+
+2. PROMPT ENGINEERING:
+   • System prompt chỉ thị LLM:
+     "You MUST cite every fact with format: [Standard-Section-Page]. Use only provided context chunks.
+      If info not in context, say 'Not found in current standards library.'"
+   • Few-shot examples với citation đúng format.
+
+3. RESPONSE STRUCTURE:
+   • LLM trả structured JSON:
+     {
+       summary: "...",
+       citations: [
+         {standard: "ASME BPVC IX 2023", section: "QW-252.1", page: 142, chunk_id: "..."},
+         ...
+       ],
+       confidence: 0.87,
+       not_found_reasons: []
+     }
+
+4. UI DISPLAY:
+   • Mỗi citation là clickable badge.
+   • Click → modal popup: hiển thị đoạn text gốc, highlighted, từ PDF với context xung quanh.
+   • Nút "Open full PDF at page 142" → mở PDF viewer đúng trang.
+
+5. CONFIDENCE CALIBRATION:
+   • Score dựa trên: retrieval cosine similarity + LLM self-reported + number of citations.
+   • Ngưỡng: > 0.8 xanh, 0.6-0.8 vàng, < 0.6 đỏ kèm disclaimer.
+
+6. FEEDBACK LOOP:
+   • Nút "Report wrong" → user mô tả sai ở đâu, gửi về backlog để fine-tune.
+   • Nút "Citation missing" → user báo thiếu standard nào.
+User Stories
+    • Là Welding Engineer, khi AI trả lời, tôi muốn click citation mở PDF đúng trang để verify trong 2 giây.
+    • Là QC Inspector, tôi muốn biết AI tự tin bao nhiêu %, để quyết định có tin hay phải tra thêm.
+    • Là SYS-ADM, tôi muốn thống kê user feedback để biết AI yếu ở lĩnh vực nào, improve tiếp.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC7.1: Mỗi AI answer có ≥ 1 citation với {standard_code, section, page} đầy đủ.
+    • AC7.2: Click citation: mở modal hiển thị text gốc + link tới PDF page tương ứng.
+    • AC7.3: Confidence hiển thị dạng số + màu (xanh/vàng/đỏ).
+    • AC7.4: Nếu không đủ context: AI trả "Not found" thay vì bịa.
+    • AC7.5: Thống kê feedback "Report wrong" lưu vào bảng ai_feedback với timestamp + user + reason.
+Phụ thuộc (Dependencies)
+    • Gap #5 (Bulk Import Pipeline) cần metadata enrichment trước.
+    • LLM provider API (Gemini/Claude).
+
+Gap #8: Real-time Notification (Telegram & Webhook)
+Mã BRD tham chiếu: INT-05, INT-06   •   Ưu tiên: P2 — Could   •   Effort: 2 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Anh Hùng — QC Manager Formosa. Anh Hùng có 15 inspector dưới quyền, 3 dự án đang chạy song song. Mỗi ngày có khoảng 40-60 Inspection Task, 2-5 NCR mới, 3-4 ITP chờ duyệt.
+Nếu anh Hùng phải vào hệ thống mở từng mục để biết có gì mới → không scale nổi. Cần push notification.
+Kịch bản ưu tiên:
+   • Inspection task overdue > 2h → cảnh báo QC-MGR để follow up.
+   • NCR mới tạo với Severity HIGH → gửi ngay cho QC-MGR và QC-DIR.
+   • MIR ở MTC_VERIFIED đang chờ Decision quá 24h → gửi QC-MGR.
+   • ITP chờ Director approve quá 48h → gửi QC-DIR.
+
+Hiện trạng: hệ thống CÓ IbshiErpWebhookProvider và Telegram provider nhưng đang chạy Mock — log ra console thay vì gửi thật.
+Tại sao cần tính năng này
+    • Không có notification = user phải chủ động poll = miss việc = chậm cho cả dây chuyền.
+    • INT-05 Outbound Webhook & INT-06 Telegram là yêu cầu integration trong BRD.
+    • Team QA/QC hiện đang dùng Telegram Group để báo việc — tích hợp vào workflow là natural fit.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. NOTIFICATION SERVICE:
+   • NotificationService với method dispatch(event_type, payload, recipients).
+   • Event types: ITP_SUBMITTED, ITP_APPROVED, ITP_REJECTED, NCR_CREATED, NCR_HIGH_SEVERITY, INSPECTION_OVERDUE, MIR_NEEDS_DECISION, HOLD_POINT_RELEASED...
+
+2. TELEGRAM BOT (INT-06):
+   • Tạo bot @IBSHIQAQCBot trên BotFather.
+   • User link account: vào Profile → Notifications → Connect Telegram → /start bot → nhập code 6 digit → linked.
+   • Gửi message format markdown: tiêu đề bold, link ngắn vào hệ thống, 1-2 bullet context.
+
+3. WEBHOOK OUTBOUND (INT-05):
+   • Cho phép khách hàng đăng ký webhook URL để nhận event (ví dụ: EPC muốn biết khi NCR close-out).
+   • Signed với HMAC-SHA256 dùng shared secret.
+   • Retry với exponential backoff 3 lần, dead letter queue nếu vẫn fail.
+
+4. EMAIL FALLBACK:
+   • Nếu user chưa link Telegram: gửi email template HTML.
+   • Email subject prefix [IBSHI-QAQC] để filter.
+
+5. PER-USER SUBSCRIPTION:
+   • User settings: checkbox cho mỗi event type → tôi có muốn nhận hay không.
+   • Mặc định theo role: QC-DIR nhận high-severity events, QC-INS chỉ nhận task assigned/rejected.
+
+6. DIGEST MODE:
+   • Một số events không cần realtime → gộp thành digest email/Telegram 1-2 lần/ngày.
+   • Ví dụ: "8h sáng: hôm nay bạn có 5 tasks, 2 NCR chờ xử lý, 1 ITP chờ duyệt."
+
+7. RATE LIMITING:
+   • Không gửi > 10 notifications/user/phút để tránh spam.
+   • Gộp events liên tiếp cùng loại trong 5 phút.
+User Stories
+    • Là QC Manager, tôi muốn Telegram báo ngay khi có NCR HIGH, để xử lý trong 30 phút.
+    • Là QC Inspector, tôi muốn nhận digest sáng về list task trong ngày, để plan công việc.
+    • Là EPC Customer, tôi muốn nhận webhook khi MIR trong dự án của tôi được closed, để update hệ thống bên tôi.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC8.1: Bot Telegram respond /start → hỏi code linking → nhận 6-digit từ user → link thành công.
+    • AC8.2: Trigger event NCR_HIGH_SEVERITY: tất cả users subscribed nhận message Telegram trong < 5 giây.
+    • AC8.3: Webhook outbound signed với HMAC header X-IBSHI-Signature.
+    • AC8.4: Webhook fail → retry 3 lần, sau đó dead letter queue với payload.
+    • AC8.5: User unsubscribe event type: không nhận nữa.
+    • AC8.6: Digest email gửi đúng 8:00 sáng (cron).
+Phụ thuộc (Dependencies)
+    • Telegram Bot token (cần đăng ký BotFather).
+    • SMTP config cho email (nếu chưa có).
+
+Gap #9: Inspection Revision Versioning
+Mã BRD tham chiếu: BR02.06   •   Ưu tiên: P2 — Could   •   Effort: 1 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Inspector Tuấn đã submit Inspection Task IP-05 Visual Weld với kết quả PASS (tất cả ô PASS xanh). Task này đã được QC-MGR accept.
+Hôm sau, QC-MGR review lại ảnh đính kèm phát hiện có một spatter chưa được đánh dấu (surface contamination nhỏ). Yêu cầu Tuấn update Inspection này.
+Hiện trạng: hệ thống có thể update — nhưng overwrite luôn. Mất version gốc. Không audit được "ai sửa gì, lúc nào, tại sao".
+BRD BR02.06: "Submitted inspection MUST be versioned. Any change creates new revision with link to previous version."
+Đây là yêu cầu evidence — nếu khách hàng audit và hỏi "bản đầu tiên thế nào?", hệ thống phải trả lời được.
+Tại sao cần tính năng này
+    • Non-negotiable với evidence-based quality system.
+    • Bắt chước logic revision của ITP — đã có rồi, chỉ cần port sang Inspection.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. VERSIONING LOGIC:
+   • Khi Submit lần đầu: inspection_id có revision=1, is_current=true.
+   • Khi update sau submit: tạo row mới với cùng inspection_id nhưng revision=2, is_current=true. Row cũ is_current=false.
+   • PK là (inspection_id, revision).
+
+2. UPDATE FLOW:
+   • Chỉ user có quyền Edit Submitted Inspection (QC-MGR+) mới thấy nút "Create Revision".
+   • Modal yêu cầu: Reason (≥ 20 ký tự).
+   • Pre-fill form với data của revision hiện tại, cho user sửa.
+   • Save → tạo revision mới, link tới revision cũ.
+
+3. DIFF VIEWER:
+   • Mở inspection detail → tab "Revisions".
+   • List all revisions với: Rev.N, Created by, Created at, Reason.
+   • Click Rev.N → hiển thị side-by-side: left column Rev.N-1, right column Rev.N.
+   • Highlight changed fields: đỏ (removed), xanh (added), vàng (modified).
+   • Cho ảnh: hiển thị thumbnail cả 2 phiên bản.
+
+4. IMPACT ON REPORTS:
+   • MDR export: luôn dùng current revision.
+   • Nếu muốn xem historical: có filter "as of date".
+
+5. LIMITATION:
+   • Không được DELETE revision. Chỉ được mark SUPERSEDED.
+   • Rev.1 phải luôn tồn tại ngay cả khi bị sửa.
+User Stories
+    • Là QC Manager, tôi muốn update Inspection sau khi Inspector đã submit, với lịch sử rõ ràng.
+    • Là Auditor, tôi muốn xem tất cả revisions của 1 Inspection để thấy đã có sửa gì.
+    • Là QC Director, tôi muốn biết lý do tại sao 1 Inspection bị sửa nhiều lần — có dấu hiệu gì bất thường.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC9.1: Submit Inspection → revision=1, is_current=true.
+    • AC9.2: Update sau submit: modal yêu cầu reason; save → tạo rev=2, link parent.
+    • AC9.3: Tab "Revisions" list all revisions theo thứ tự thời gian.
+    • AC9.4: Diff viewer highlight chính xác các thay đổi.
+    • AC9.5: DB không cho phép DELETE revision (trigger block).
+
+Gap #10: i18n — VN/EN Multilingual Support
+Mã BRD tham chiếu: NFR-USE-01   •   Ưu tiên: P2 — Could   •   Effort: 1 ngày dev
+Bối cảnh thực tế tại công trình
+KỊCH BẢN
+Hiện trạng UI: một số nơi tiếng Anh (headers, buttons), một số tiếng Việt (help text, validation error).
+Đối tượng user:
+   • QC Inspector người Việt — muốn dùng tiếng Việt hoàn toàn.
+   • Customer audit (LR/BV/DNV inspector người nước ngoài) — cần English để review data.
+   • Consultant EPC (Korean/Japanese EPC) — English.
+   • NDT vendor outsource — mỗi nơi khác.
+
+Yêu cầu: toggle VN/EN ngay trong UI, theo user preference hoặc browser language.
+Tại sao cần tính năng này
+    • NFR-USE-01: "System SHALL support VN and EN languages, switchable by user."
+    • Contract với customer thường require English interface cho audit.
+    • Dự án liên doanh VN-nước ngoài ngày càng nhiều.
+Tính năng cụ thể cần xây dựng
+FEATURES
+1. FRAMEWORK:
+   • vue-i18n (v9 — Composition API friendly).
+   • File locale: locales/vi.json, locales/en.json.
+   • Keys dạng dot-notation: itp.approve_button, inspection.form.measurement_label.
+
+2. EXTRACTION:
+   • Rà soát tất cả .vue files, extract hardcoded string.
+   • Ước tính ~500-800 keys.
+   • Chia theo module: common, projects, standards, itp, inspection, mir.
+
+3. DYNAMIC CONTENT:
+   • Data dynamic (tên dự án, tên người) — không translate.
+   • Enum values (ITP states, role names) — translate qua lookup table trong locale file.
+
+4. USER SWITCHER:
+   • Profile → Preferences → Language: [Tiếng Việt | English].
+   • Lưu vào user.preferences.language.
+   • Auto-detect từ browser navigator.language lần đầu.
+   • Top-right có icon 🌐 để switch quick.
+
+5. DATE/NUMBER FORMATTING:
+   • VN: dd/MM/yyyy, HH:mm, 1.234,56.
+   • EN: MM/DD/YYYY, HH:mm AM/PM, 1,234.56.
+   • Dùng Intl API native.
+
+6. BACKEND MESSAGE:
+   • Error messages từ backend: trả error code thay vì message string.
+   • Frontend map code → translated message.
+User Stories
+    • Là QC Inspector người Việt, tôi muốn UI hoàn toàn tiếng Việt, để làm việc nhanh, không hiểu lầm.
+    • Là Customer Auditor (LR/BV), tôi muốn switch sang English để review dữ liệu.
+    • Là dev, tôi muốn khi thêm string mới là thêm key vào locale files, không hardcode.
+Acceptance Criteria (Tiêu chí nghiệm thu)
+    • AC10.1: Tất cả UI strings có trong locale files, không còn hardcoded.
+    • AC10.2: Switch VN ↔ EN tức thời, không reload page.
+    • AC10.3: Language preference lưu persistent — lần login sau vẫn giữ.
+    • AC10.4: Date/number format đúng theo locale.
+    • AC10.5: Translation quality: review bởi native speakers (technical terms đúng).
+Phụ thuộc (Dependencies)
+    • vue-i18n package.
+    • Thời gian cho chuyên gia review dịch (đặc biệt từ kỹ thuật ngành hàn/NDT).
+
+Kết luận & Đề xuất triển khai
+Thứ tự ưu tiên triển khai (4 sprints × 1 tuần)
+Đề xuất chia 10 gap ra 4 sprint 1 tuần, tổng 4 tuần. Đây là roadmap thực tế với 1 dev full-time hoặc 2 dev làm song song:
+Sprint	Thời gian	Gap triển khai	Effort	Dependency
+Sprint 1 (tuần 1)	21/04 - 27/04	Gap #2 MFA + Gap #6 Validation	4 ngày	Độc lập
+Sprint 2 (tuần 2)	28/04 - 04/05	Gap #3 Digital Signature + Gap #4 Hold Point	5 ngày	Cần MFA xong
+Sprint 3 (tuần 3)	05/05 - 11/05	Gap #1 Offline Queue + Gap #9 Inspection Revision	4 ngày	Độc lập
+Sprint 4 (tuần 4)	12/05 - 18/05	Gap #5 Bulk Import + Gap #7 Citation + Gap #8 Notification + Gap #10 i18n	8 ngày (2 dev)	Cần Gap #5 trước #7
+Rủi ro cần lưu ý
+    • Gap #5 Bulk Import cần mua API key embedding (Gemini/OpenAI) — budget ~200-500 USD/tháng cho quy mô ban đầu.
+    • Gap #8 Telegram cần tài khoản bot + server public IP (hoặc ngrok/cloudflared cho dev). Phải làm việc với IT infrastructure.
+    • Gap #10 i18n — quality translation cần review bởi technical editor, có thể chậm 1-2 ngày do chờ review.
+    • Gap #1 Offline Queue cần test kỹ trên tablet thực tế (không chỉ simulate trong dev) — nên có 1 tablet dedicated cho QA testing.
+Tiêu chí hoàn thành (Definition of Done cho tất cả 10 Gap)
+    • Unit test coverage ≥ 70% cho các service/controller mới.
+    • Integration test với happy path + 3 edge cases mỗi feature.
+    • E2E test scenario trên Playwright/Cypress cho 5 luồng chính (login + MFA, submit offline inspection, sign MIR, release hold point, bulk import).
+    • User documentation update cho User Guide v1.1 — mô tả tính năng mới.
+    • Change log công khai cho user — "What's new in Pilot v1.1".
+    • Demo buổi Friday workshop tuần cuối sprint.
+
+— HẾT —
+IBSHI QA/QC Platform — Giải thích chi tiết 10 Critical Gaps
