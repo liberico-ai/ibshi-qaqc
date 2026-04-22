@@ -50,6 +50,13 @@
       </div>
     </template>
 
+    <!-- Revision history -->
+    <InspectionRevisionView v-if="inspection?.id"
+      :inspection-id="inspection.id"
+      :can-revise="inspection.status === 'COMPLETED' || inspection.status === 'SUBMITTED'"
+      @revised="load"
+    />
+
     <div v-if="toast.show" :class="toast.ok ? 'bg-green-600' : 'bg-red-600'"
       class="fixed bottom-5 right-5 z-50 text-white text-sm px-4 py-3 rounded-lg shadow-lg">{{ toast.message }}</div>
   </div>
@@ -58,6 +65,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { apiFetch } from '@/utils/api.js';
+import InspectionRevisionView from './InspectionRevisionView.vue';
 import { useRoute } from 'vue-router';
 import { offlineFormStore } from '@/core/offline-form-store.js';
 

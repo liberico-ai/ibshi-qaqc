@@ -1,18 +1,39 @@
 import { paginate, pool } from '../../../../core/db.js';
 import { inspectionRepo } from '../repositories/InspectionRepository.js';
 import { InspectionService } from '../services/InspectionService.js';
+import { InspectionRevisionService } from '../services/InspectionRevisionService.js';
 import { AppError } from '../../../../core/errors.js';
 import { auditLog } from '../../../../core/audit-log.js';
 
 export class InspectionController {
   static async getAll(req, res) {
     const { limit, offset, page } = paginate(req);
-    const filter = {};
+    const filter = { is_current: true };
     if (req.query.assignedTo) filter.assigned_to = req.query.assignedTo;
     if (req.query.projectId)  filter.project_id  = req.query.projectId;
     if (req.query.status)     filter.status       = req.query.status;
     const { data, meta } = await inspectionRepo.findAndCount(filter, { limit, offset, orderBy: 'created_at DESC' });
     res.json({ data, pagination: { page, limit, total: meta.total, totalPages: meta.totalPages } });
+  }
+
+  static async createRevision(req, res) {
+    const { reason, ...updatedData } = req.body;
+    const result = await InspectionRevisionService.createRevision(req.params.id, {
+      userId: req.user?.id,
+      reason,
+      updatedData,
+    });
+    res.status(201).json({ data: result });
+  }
+
+  static async listRevisions(req, res) {
+    const result = await InspectionRevisionService.getRevisionHistory(req.params.id);
+    res.json({ data: result });
+  }
+
+  static async diffRevisions(req, res) {
+    const diff = await InspectionRevisionService.getDiff(req.params.fromId, req.params.toId);
+    res.json({ data: diff });
   }
 
   static async getOne(req, res) {
@@ -22,7 +43,7 @@ export class InspectionController {
   }
 
   static async create(req, res) {
-    const { plan_id, item_id, project_id, unit_id, ip_code, assigned_to } = req.body;
+    const { plan_id, item_id, project_id, unit_id, ip_code, assigned_to } = req.validated ?? req.body;
     const record = await inspectionRepo.create({ plan_id, item_id, project_id, unit_id, ip_code, assigned_to, status: 'PENDING' });
     res.status(201).json({ data: record });
   }
@@ -30,7 +51,8 @@ export class InspectionController {
   static async saveResults(req, res) {
     const existing = await inspectionRepo.findOne(req.params.id);
     if (!existing) throw new AppError(404, 'Inspection not found');
-    await inspectionRepo.saveResults(req.params.id, req.body.results ?? []);
+    const body = req.validated ?? req.body;
+    await inspectionRepo.saveResults(req.params.id, body.results ?? []);
     await InspectionService.transition(req.params.id, 'IN_PROGRESS');
 
     const offlineSynced = req.headers['x-offline-sync'] === 'true';
@@ -39,7 +61,7 @@ export class InspectionController {
       action: 'update',
       tableName: 'qaqc_inspections',
       entityId: req.params.id,
-      newData: { results_count: (req.body.results ?? []).length },
+      newData: { results_count: (body.results ?? []).length },
       offlineSynced,
       clientTimestamp,
     });
@@ -48,12 +70,12 @@ export class InspectionController {
   }
 
   static async sign(req, res) {
-    const record = await InspectionService.sign(req.params.id, req.user?.id, req.body.pin);
+    const record = await InspectionService.sign(req.params.id, req.user?.id, (req.validated ?? req.body).pin);
     res.json({ data: record });
   }
 
   static async uploadPhoto(req, res) {
-    const { file_url, result_id, taken_at } = req.body;
+    const { file_url, result_id, taken_at } = req.validated ?? req.body;
     if (!file_url) throw new AppError(400, 'file_url required');
     const { rows } = await pool.query(
       'INSERT INTO qaqc_inspection_photos (inspection_id,result_id,file_url,taken_at) VALUES ($1,$2,$3,$4) RETURNING *',

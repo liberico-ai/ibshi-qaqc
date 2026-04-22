@@ -11,7 +11,9 @@ class InspectionRepository extends Repository {
         SELECT i.*, u.full_name AS assigned_name
         FROM qaqc_inspections i
         LEFT JOIN sys_users u ON u.id = i.assigned_to
-        WHERE i.id = $1
+        WHERE i.id = $1 OR (i.original_id = $1 AND i.is_current = TRUE)
+        ORDER BY i.revision DESC
+        LIMIT 1
       `, [inspectionId]),
       pool.query('SELECT * FROM qaqc_inspection_results WHERE inspection_id = $1 ORDER BY created_at', [inspectionId]),
       pool.query('SELECT * FROM qaqc_inspection_photos WHERE inspection_id = $1 ORDER BY created_at', [inspectionId]),
@@ -30,6 +32,7 @@ class InspectionRepository extends Repository {
              count(*) AS total
       FROM qaqc_inspections i
       JOIN qaqc_projects p ON p.id = i.project_id
+      WHERE i.is_current = TRUE
       GROUP BY p.code, p.name, i.ip_code
       ORDER BY p.code, i.ip_code
     `);
