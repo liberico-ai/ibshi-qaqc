@@ -1,7 +1,6 @@
 import { pool, transaction } from '../../../../core/db.js';
 import { AppError } from '../../../../core/errors.js';
 import { hooks } from '../../../../core/hooks.js';
-import { SignatureService } from '../../../system/backend/services/SignatureService.js';
 
 export class HoldPointService {
   static async checkBlocking(planId, targetItemSeq) {
@@ -68,7 +67,7 @@ export class HoldPointService {
     return rows;
   }
 
-  static async releaseHoldPoint(itemId, { userId, comment, signatureId }) {
+  static async releaseHoldPoint(itemId, { userId, comment }) {
     if (!comment || comment.length < 20) {
       throw new AppError(400, 'Comment phải có ít nhất 20 ký tự');
     }
@@ -88,17 +87,10 @@ export class HoldPointService {
     );
     if (existing[0]) throw new AppError(409, 'Hold Point này đã được release');
 
-    if (signatureId) {
-      const sig = await SignatureService.getSignature('HOLD_RELEASE', itemId);
-      if (!sig || sig.isVoided || sig.id !== signatureId) {
-        throw new AppError(403, 'Chữ ký số không hợp lệ');
-      }
-    }
-
     const { rows } = await pool.query(
-      `INSERT INTO qaqc_itp_ip_releases (item_id, released_by, comment, signature_id, is_override)
-       VALUES ($1,$2,$3,$4,false) RETURNING *`,
-      [itemId, userId, comment, signatureId ?? null]
+      `INSERT INTO qaqc_itp_ip_releases (item_id, released_by, comment, is_override)
+       VALUES ($1,$2,$3,false) RETURNING *`,
+      [itemId, userId, comment]
     );
 
     await hooks.doAction('qaqc.notification.event', {
@@ -115,7 +107,7 @@ export class HoldPointService {
     return rows[0];
   }
 
-  static async overrideHoldPoint(itemId, { userId, reason, signatureId }) {
+  static async overrideHoldPoint(itemId, { userId, reason }) {
     if (!reason || reason.length < 50) {
       throw new AppError(400, 'Lý do override phải có ít nhất 50 ký tự');
     }
@@ -129,18 +121,11 @@ export class HoldPointService {
       throw new AppError(400, 'Inspection Point này không phải Hold Point');
     }
 
-    if (signatureId) {
-      const sig = await SignatureService.getSignature('HOLD_OVERRIDE', itemId);
-      if (!sig || sig.isVoided || sig.id !== signatureId) {
-        throw new AppError(403, 'Chữ ký số không hợp lệ');
-      }
-    }
-
     await transaction(async (client) => {
       await client.query(
-        `INSERT INTO sys_overrides (override_type, entity_id, reason, performed_by, signature_id)
-         VALUES ('HOLD_POINT',$1,$2,$3,$4)`,
-        [itemId, reason, userId, signatureId ?? null]
+        `INSERT INTO sys_overrides (override_type, entity_id, reason, performed_by)
+         VALUES ('HOLD_POINT',$1,$2,$3)`,
+        [itemId, reason, userId]
       );
       const { rows: existing } = await client.query(
         'SELECT id FROM qaqc_itp_ip_releases WHERE item_id=$1',
@@ -148,9 +133,9 @@ export class HoldPointService {
       );
       if (!existing[0]) {
         await client.query(
-          `INSERT INTO qaqc_itp_ip_releases (item_id, released_by, comment, signature_id, is_override)
-           VALUES ($1,$2,$3,$4,true)`,
-          [itemId, userId, reason.slice(0, 200), signatureId ?? null]
+          `INSERT INTO qaqc_itp_ip_releases (item_id, released_by, comment, is_override)
+           VALUES ($1,$2,$3,true)`,
+          [itemId, userId, reason.slice(0, 200)]
         );
       }
     });

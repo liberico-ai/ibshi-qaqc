@@ -2,7 +2,6 @@ import { AppError } from '../../../../core/errors.js';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { usersRepo } from '../repositories/UsersRepository.js';
-import { mfaRepo } from '../repositories/MFARepository.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('FATAL: JWT_SECRET environment variable is required');
@@ -34,30 +33,11 @@ export class AuthController {
 
     await usersRepo.recordSuccessfulLogin(user.id);
 
-    const activeFactors = await mfaRepo.getActiveFactors(user.id);
-    if (activeFactors.length > 0) {
-      const partialToken = jwt.sign(
-        { id: user.id, username: user.username, is_admin: user.is_admin, full_name: user.full_name, step: 'mfa' },
-        JWT_SECRET,
-        { expiresIn: '5m' }
-      );
-      return res.json({
-        mfa_required: true,
-        partial_token: partialToken,
-        available_factors: activeFactors.map(f => ({
-          id: f.id,
-          factor_type: f.factor_type,
-          factor_name: f.factor_name,
-        })),
-      });
-    }
-
     const token = jwt.sign({
       id: user.id,
       username: user.username,
       is_admin: user.is_admin,
       full_name: user.full_name,
-      mfa_verified: false,
     }, JWT_SECRET, { expiresIn: '8h' });
 
     res.json({

@@ -3,7 +3,6 @@ import { mirRepo } from '../repositories/MIRRepository.js';
 import { MIRWorkflowService } from '../services/MIRWorkflowService.js';
 import { MIRCrossCheckService } from '../services/MIRCrossCheckService.js';
 import { AppError } from '../../../../core/errors.js';
-import { SignatureService } from '../../../system/backend/services/SignatureService.js';
 
 export class MIRController {
   static async getAll(req, res) {
@@ -60,12 +59,7 @@ export class MIRController {
   }
 
   static async decide(req, res) {
-    const { decision, waiver_note, ai_result, signature_id } = req.validated ?? req.body;
-    if (!signature_id) throw new AppError(400, 'signature_id required — ký số trước khi quyết định');
-    const sig = await SignatureService.getSignature('MIR', req.params.id);
-    if (!sig || sig.isVoided || sig.id !== signature_id) {
-      throw new AppError(403, 'Chữ ký số không hợp lệ hoặc không khớp với tài liệu này');
-    }
+    const { decision, waiver_note, ai_result } = req.validated ?? req.body;
     const record = await MIRWorkflowService.decide(req.params.id, decision, req.user?.id, waiver_note, ai_result);
     res.json({ data: record });
   }

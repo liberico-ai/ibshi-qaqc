@@ -356,7 +356,7 @@ ID	As a	Want to	So that	Ưu tiên
 US02.01	QC Inspector	Xem danh sách công việc theo ngày/tuần	Biết phải làm gì, ở đâu	M
 US02.02	QC Inspector	Mở checklist theo IP và ghi PASS/FAIL/HOLD từng mục	Chuẩn hoá ghi nhận	M
 US02.03	QC Inspector	Chụp ảnh đính kèm cho từng checkpoint	Có bằng chứng hình ảnh	M
-US02.04	QC Inspector	Ký số (PIN + biometric) để xác thực kết quả	Non-repudiation	M
+US02.04	QC Inspector	Xác nhận kết quả bằng tài khoản đã đăng nhập	Non-repudiation	M
 US02.05	QC Inspector	Làm việc offline 2h khi mạng xưởng mất	Không gián đoạn	M (Phase 4 nâng cao)
 US02.06	QC Manager	Giám sát bảng trạng thái IP theo project/unit	Can thiệp sớm	M
 US02.07	QC Inspector	Tạo NCR draft khi kết quả FAIL	FAIL không tự động chuyển NCR theo quyết định Toan	M
@@ -804,7 +804,7 @@ H.4 Sao lưu & Khôi phục thảm họa (Backup & DR)
 H.5 Bảo mật (Security)
 H.5.1 Authentication & Authorization
     • JWT RS256, thời hạn access token 60 phút, refresh token 8 giờ với rotation.
-    • SSO từ IBS ERP (INT-01). MFA bắt buộc cho role QC-DIR, QC-MGR, SYS-ADM, AUD.
+    • SSO từ IBS ERP (INT-01). Đăng nhập chỉ dùng mật khẩu (không MFA/2FA).
     • RBAC: 12 role nội bộ × 10 module × 4 hành động (Read/Create/Update/Sign).
     • Session revocation: Admin có thể buộc đăng xuất user cụ thể (blocklist token ID).
     • Password policy: dùng ERP (single source). QAQC không tự lưu mật khẩu.
@@ -827,7 +827,7 @@ H.6 Audit, Tuân thủ & Bảo lưu hồ sơ
     • Audit trail append-only cho: Inspection decision, NCR, MIR decision, MDR sign, User role change, Standard import.
     • Mỗi bản ghi audit chứa: userId, role, timestamp UTC, actionType, entityRef, oldValue, newValue, ipAddress, userAgent.
     • Giữ audit log 5 năm (yêu cầu ISO 9001) và không được chỉnh sửa.
-    • Chữ ký số (digital signature) bắt buộc ở: MIR Accept/Reject, MDR release, NCR Close. Dùng khóa cá nhân kèm OTP.
+    • Quyết định ở MIR Accept/Reject, MDR release, NCR Close được ghi nhận với userId người thực hiện (đã đăng nhập bằng mật khẩu) — không yêu cầu PIN/OTP riêng.
     • Tuân thủ ISO 9001:2015, ISO 14001:2015, ISO 45001:2018 ở cấp độ "quản lý hồ sơ chất lượng".
     • Export audit ra CSV/JSON khi auditor yêu cầu; có quyền filter theo project/module/time.
 H.7 Vận hành & Quan sát (Operability & Observability)

@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS qaqc_itp_ip_releases (
   released_by  INTEGER      NOT NULL REFERENCES sys_users(id),
   released_at  TIMESTAMPTZ  DEFAULT now(),
   comment      TEXT         NOT NULL CHECK (length(comment) >= 20),
-  signature_id UUID         REFERENCES sys_signatures(id),
   is_override  BOOLEAN      DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_ip_release_item ON qaqc_itp_ip_releases(item_id);
@@ -22,8 +21,7 @@ CREATE TABLE IF NOT EXISTS sys_overrides (
   entity_id     UUID         NOT NULL,
   reason        TEXT         NOT NULL CHECK (length(reason) >= 50),
   performed_by  INTEGER      NOT NULL REFERENCES sys_users(id),
-  performed_at  TIMESTAMPTZ  DEFAULT now(),
-  signature_id  UUID         REFERENCES sys_signatures(id)
+  performed_at  TIMESTAMPTZ  DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_overrides_entity   ON sys_overrides(entity_id);
 CREATE INDEX IF NOT EXISTS idx_overrides_type_at  ON sys_overrides(override_type, performed_at DESC);

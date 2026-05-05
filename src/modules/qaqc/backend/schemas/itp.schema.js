@@ -35,7 +35,6 @@ export const addITPItemSchema = z.object({
 export const itpTransitionSchema = z.object({
   targetStatus: z.string().min(1).max(30),
   comment: z.string().max(500).optional(),
-  signature_id: uuidSchema.optional().nullable(),
 });
 
 export const itpCopySchema = z.object({
@@ -44,10 +43,8 @@ export const itpCopySchema = z.object({
 
 export const releaseHoldSchema = z.object({
   comment: z.string().min(20, 'Nhận xét tối thiểu 20 ký tự').max(2000),
-  signature_id: uuidSchema.optional().nullable(),
 });
 
 export const overrideHoldSchema = z.object({
   reason: z.string().min(50, 'Lý do override tối thiểu 50 ký tự').max(2000),
-  signature_id: uuidSchema.optional().nullable(),
 });

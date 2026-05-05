@@ -18,7 +18,7 @@
           class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">Gửi duyệt</button>
         <button v-if="plan.status === 'UNDER_REVIEW'" v-can="'qaqc.itp.approve'" @click="transition('MANAGER_APPROVED')"
           class="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">Manager Approve</button>
-        <button v-if="plan.status === 'MANAGER_APPROVED'" v-can="'qaqc.itp.approve'" @click="openDirectorSign"
+        <button v-if="plan.status === 'MANAGER_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('DIRECTOR_APPROVED')"
           class="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">Director Approve</button>
         <button v-if="plan.status === 'DIRECTOR_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('ACTIVE')"
           class="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">Kích hoạt</button>
@@ -180,33 +180,13 @@
             class="flex-1 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg transition-colors">
             Huỷ
           </button>
-          <button @click="startReleaseSigning" :disabled="releaseModal.comment.length < 20"
+          <button @click="confirmRelease" :disabled="releaseModal.comment.length < 20"
             class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50">
-            Ký và Release
+            Release
           </button>
         </div>
       </div>
     </div>
-
-    <SignatureCeremony
-      :show="signModal"
-      :entity-type="releaseModal.isOverride ? 'HOLD_OVERRIDE' : 'HOLD_RELEASE'"
-      :entity-id="releaseModal.itemId"
-      :summary-text="`${releaseModal.isOverride ? 'Override' : 'Release'} Hold Point — ${releaseModal.ipCode}`"
-      :doc-payload="{ itemId: releaseModal.itemId, comment: releaseModal.comment }"
-      @success="onReleaseSignSuccess"
-      @cancel="signModal = false"
-    />
-
-    <SignatureCeremony
-      :show="directorSignModal"
-      entity-type="ITP"
-      :entity-id="route.params.id"
-      :summary-text="`ITP ${plan?.product_type} — Director Approve`"
-      :doc-payload="{ itpId: route.params.id, action: 'DIRECTOR_APPROVED' }"
-      @success="onDirectorSignSuccess"
-      @cancel="directorSignModal = false"
-    />
 
     <div v-if="toast.show" :class="toast.ok ? 'bg-green-600' : 'bg-red-600'"
       class="fixed bottom-5 right-5 z-50 text-white text-sm px-4 py-3 rounded-lg shadow-lg">{{ toast.message }}</div>
@@ -218,7 +198,6 @@ import { ref, reactive, onMounted } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import { useRoute } from 'vue-router';
 import { useProjects } from './useProjects.js';
-import SignatureCeremony from '@/components/SignatureCeremony.vue';
 
 const route = useRoute();
 const { projects } = useProjects();
@@ -232,8 +211,6 @@ const savingItem = ref(false);
 const itemForm = ref({ ip_code: '', description: '', hold_flag: false, witness_flag: false, acceptance_criteria: '', checkpoints: [] });
 const holdStatus = ref({});
 const releaseModal = reactive({ show: false, itemId: '', ipCode: '', comment: '', isOverride: false });
-const signModal = ref(false);
-const directorSignModal = ref(false);
 
 function openAddItem() {
   itemForm.value = { ip_code: '', description: '', hold_flag: false, witness_flag: false, acceptance_criteria: '', checkpoints: [] };
@@ -316,20 +293,15 @@ function openRelease(item) {
   releaseModal.show = true;
 }
 
-function startReleaseSigning() {
+async function confirmRelease() {
   releaseModal.show = false;
-  signModal.value = true;
-}
-
-async function onReleaseSignSuccess(sig) {
-  signModal.value = false;
   try {
     const endpoint = releaseModal.isOverride
       ? `/api/qaqc/itp/items/${releaseModal.itemId}/override`
       : `/api/qaqc/itp/items/${releaseModal.itemId}/release`;
     const body = releaseModal.isOverride
-      ? { reason: releaseModal.comment, signature_id: sig.id }
-      : { comment: releaseModal.comment, signature_id: sig.id };
+      ? { reason: releaseModal.comment }
+      : { comment: releaseModal.comment };
     const res = await apiFetch(endpoint, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -341,22 +313,6 @@ async function onReleaseSignSuccess(sig) {
   } catch (e) {
     showToast(false, e.message);
   }
-}
-
-function openDirectorSign() {
-  directorSignModal.value = true;
-}
-
-async function onDirectorSignSuccess(sig) {
-  directorSignModal.value = false;
-  const res = await apiFetch(`/api/qaqc/itp/${route.params.id}/approve`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ targetStatus: 'DIRECTOR_APPROVED', signature_id: sig.id }),
-  });
-  const json = await res.json();
-  if (!res.ok) { showToast(false, json.error || 'Lỗi chuyển trạng thái'); return; }
-  plan.value = json.data;
-  showToast(true, 'DIRECTOR_APPROVED — đã ký số');
 }
 
 async function transition(targetStatus) {

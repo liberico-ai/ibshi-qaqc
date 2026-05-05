@@ -22,10 +22,7 @@ export const saveResultsSchema = z.object({
   results: z.array(resultRowSchema).min(1).max(200),
 });
 
-export const signInspectionSchema = z.object({
-  pin: z.string().min(4).max(20).optional(),
-  signature_id: uuidSchema.optional().nullable(),
-});
+export const signInspectionSchema = z.object({}).optional();
 
 export const uploadPhotoSchema = z.object({
   file_url: z.string().url(),

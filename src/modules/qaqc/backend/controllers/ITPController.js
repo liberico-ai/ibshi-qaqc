@@ -2,7 +2,6 @@ import { paginate } from '../../../../core/db.js';
 import { itpRepo } from '../repositories/ITPRepository.js';
 import { ITPWorkflowService } from '../services/ITPWorkflowService.js';
 import { AppError } from '../../../../core/errors.js';
-import { SignatureService } from '../../../system/backend/services/SignatureService.js';
 import { HoldPointService } from '../services/HoldPointService.js';
 
 export class ITPController {
@@ -45,14 +44,7 @@ export class ITPController {
   }
 
   static async approve(req, res) {
-    const { targetStatus, signature_id } = req.validated ?? req.body;
-    if (targetStatus === 'DIRECTOR_APPROVED') {
-      if (!signature_id) throw new AppError(400, 'signature_id required cho DIRECTOR_APPROVED');
-      const sig = await SignatureService.getSignature('ITP', req.params.id);
-      if (!sig || sig.isVoided || sig.id !== signature_id) {
-        throw new AppError(403, 'Chữ ký số không hợp lệ hoặc không khớp với tài liệu này');
-      }
-    }
+    const { targetStatus } = req.validated ?? req.body;
     const record = await ITPWorkflowService.transition(req.params.id, targetStatus, req.user?.id);
     res.json({ data: record });
   }
@@ -96,21 +88,19 @@ export class ITPController {
   }
 
   static async releaseHoldPoint(req, res) {
-    const { comment, signature_id } = req.validated ?? req.body;
+    const { comment } = req.validated ?? req.body;
     const release = await HoldPointService.releaseHoldPoint(req.params.itemId, {
       userId: req.user.id,
       comment,
-      signatureId: signature_id ?? null,
     });
     res.status(201).json({ data: release });
   }
 
   static async overrideHoldPoint(req, res) {
-    const { reason, signature_id } = req.validated ?? req.body;
+    const { reason } = req.validated ?? req.body;
     await HoldPointService.overrideHoldPoint(req.params.itemId, {
       userId: req.user.id,
       reason,
-      signatureId: signature_id ?? null,
     });
     res.json({ ok: true });
   }

@@ -5,7 +5,6 @@ import { registerSystemCronjobs } from './cronjobs.js';
 import { SettingsService } from '../../../core/settings.js';
 import { auditLog } from '../../../core/audit-log.js';
 import { providerRegistry } from '../../../core/provider-registry.js';
-import { TelegramOTPProvider } from './providers/TelegramOTPProvider.js';
 
 import { channelRegistry } from './services/ChannelRegistry.js';
 import { TelegramChannelProvider } from './providers/TelegramChannelProvider.js';
@@ -38,7 +37,6 @@ async function loadChannelConfig(className) {
 export default async function registerSystemModule(app) {
   registerSystemActions();
 
-  providerRegistry.register('TelegramOTPProvider', TelegramOTPProvider, 'mfa', 'Gửi HOTP qua Telegram bot');
   providerRegistry.register('notification-telegram',   TelegramChannelProvider,   'system', 'Telegram notification channel');
   providerRegistry.register('notification-mattermost', MattermostChannelProvider, 'system', 'Mattermost notification channel');
   providerRegistry.register('notification-email',      EmailChannelProvider,      'system', 'Email notification channel (stub)');

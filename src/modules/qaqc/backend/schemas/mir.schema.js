@@ -33,7 +33,6 @@ export const decideSchema = z.object({
   decision: z.enum(['ACCEPT', 'REJECT', 'WAIVER']),
   waiver_note: z.string().min(10).max(2000).optional().nullable(),
   ai_result: z.record(z.unknown()).optional().nullable(),
-  signature_id: uuidSchema.optional().nullable(),
 });
 
 export const warehouseSchema = z.object({

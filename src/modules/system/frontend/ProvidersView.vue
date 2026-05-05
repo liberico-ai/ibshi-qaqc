@@ -220,13 +220,6 @@ const CONFIG_GUIDES = {
     ],
     placeholder: '{\n  "mode": "rule-based",\n  "api_key": ""\n}',
   },
-  'TelegramOTPProvider': {
-    fields: [
-      { key: 'bot_token',        type: 'string', desc: 'Token Bot Telegram (lấy từ @BotFather)', example: '123456:ABC-DEF...' },
-      { key: 'message_template', type: 'string', desc: 'Nội dung tin nhắn. Dùng {{otp}} làm placeholder mã OTP', example: 'Mã OTP: {{otp}}. Hiệu lực 5 phút.' },
-    ],
-    placeholder: '{\n  "bot_token": "",\n  "message_template": "Mã OTP của bạn: {{otp}}. Hiệu lực 5 phút."\n}',
-  },
 };
 
 const providers = ref([]);
