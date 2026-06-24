@@ -33,6 +33,8 @@ export const decideSchema = z.object({
   decision: z.enum(['ACCEPT', 'REJECT', 'WAIVER']),
   waiver_note: z.string().min(10).max(2000).optional().nullable(),
   ai_result: z.record(z.unknown()).optional().nullable(),
+  // PIN ký số — bắt buộc để xác nhận quyết định nghiệm thu vật tư.
+  pin: z.string().min(4).max(12),
 });
 
 export const warehouseSchema = z.object({

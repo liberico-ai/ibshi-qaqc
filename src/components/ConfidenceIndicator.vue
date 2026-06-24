@@ -1,7 +1,7 @@
 <template>
   <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full" :class="colorClass">
     <span class="w-1.5 h-1.5 rounded-full inline-block" :class="dotClass"></span>
-    {{ pct }}% tin cậy
+    {{ $t('confidence.label', { pct }) }}
   </span>
 </template>
 

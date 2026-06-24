@@ -3,15 +3,15 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Quản Lý Providers</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cấu hình các provider tích hợp (ERP, AI, NAS...)</p>
+        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">{{ $t('providers.title') }}</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{{ $t('providers.subtitle') }}</p>
       </div>
       <button @click="openCreate"
         class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Thêm Provider
+        {{ $t('providers.add_provider') }}
       </button>
     </div>
 
@@ -20,19 +20,19 @@
       <table class="w-full text-left text-sm">
         <thead>
           <tr class="bg-slate-50 dark:bg-[#1a1a2e] border-b border-slate-200 dark:border-slate-800">
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">Tên</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">Class</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">Module</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300 text-right">Thao tác</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">{{ $t('providers.col_name') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">{{ $t('providers.col_class') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">{{ $t('providers.col_module') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">{{ $t('common.status') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300 text-right">{{ $t('common.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
           <tr v-if="loading && providers.length === 0">
-            <td colspan="5" class="px-4 py-8 text-center text-slate-500">Đang tải...</td>
+            <td colspan="5" class="px-4 py-8 text-center text-slate-500">{{ $t('providers.loading') }}</td>
           </tr>
           <tr v-else-if="providers.length === 0">
-            <td colspan="5" class="px-4 py-8 text-center text-slate-500">Chưa có provider nào</td>
+            <td colspan="5" class="px-4 py-8 text-center text-slate-500">{{ $t('providers.empty') }}</td>
           </tr>
           <tr v-for="p in providers" :key="p.id"
             class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
@@ -47,21 +47,21 @@
                 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
                 : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'"
                 class="px-2 py-0.5 rounded-full text-xs font-medium">
-                {{ p.is_active ? 'Hoạt động' : 'Vô hiệu' }}
+                {{ p.is_active ? $t('providers.active') : $t('providers.inactive') }}
               </span>
             </td>
             <td class="px-4 py-3 text-right whitespace-nowrap">
               <button @click="testProvider(p)" :disabled="testingId === p.id"
                 class="text-xs px-2 py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 dark:text-amber-400 disabled:opacity-50 mr-2 transition-colors">
-                {{ testingId === p.id ? 'Testing...' : 'Test' }}
+                {{ testingId === p.id ? $t('providers.testing') : $t('providers.test') }}
               </button>
               <button @click="openEdit(p)"
                 class="text-xs px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 dark:text-blue-400 mr-2 transition-colors">
-                Sửa
+                {{ $t('common.edit') }}
               </button>
               <button @click="confirmDelete(p)"
                 class="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-400 transition-colors">
-                Xóa
+                {{ $t('common.delete') }}
               </button>
             </td>
           </tr>
@@ -86,7 +86,7 @@
       <div class="relative bg-white dark:bg-[#1a1a2e] rounded-xl shadow-2xl w-full max-w-lg">
         <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
           <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100">
-            {{ modal.editing ? 'Sửa Provider' : 'Thêm Provider' }}
+            {{ modal.editing ? $t('providers.edit_provider') : $t('providers.add_provider') }}
           </h3>
           <button @click="closeModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,16 +97,16 @@
         <form @submit.prevent="submitModal" class="p-5 space-y-4">
           <!-- Name -->
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Tên hiển thị *</label>
-            <input v-model="form.name" required placeholder="VD: ibshi ERP Webhook Prod"
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{{ $t('providers.name_label') }} *</label>
+            <input v-model="form.name" required :placeholder="$t('providers.name_placeholder')"
               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
           </div>
           <!-- Class -->
           <div v-if="!modal.editing">
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Provider Class *</label>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{{ $t('providers.class_label') }} *</label>
             <select v-model="form.class_name" required
               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-              <option value="">-- Chọn class --</option>
+              <option value="">{{ $t('providers.select_class') }}</option>
               <option v-for="c in classes" :key="c.className" :value="c.className">
                 {{ c.className }} ({{ c.module }})
               </option>
@@ -122,11 +122,11 @@
           <div class="flex items-center gap-2">
             <input type="checkbox" id="is_active" v-model="form.is_active"
               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-            <label for="is_active" class="text-sm text-slate-700 dark:text-slate-300">Kích hoạt</label>
+            <label for="is_active" class="text-sm text-slate-700 dark:text-slate-300">{{ $t('providers.activate') }}</label>
           </div>
           <!-- Config guide -->
           <div v-if="currentGuide" class="rounded-lg border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 p-3 text-xs space-y-1.5">
-            <p class="font-semibold text-blue-700 dark:text-blue-400 mb-2">Hướng dẫn cấu hình — {{ activeClassName }}</p>
+            <p class="font-semibold text-blue-700 dark:text-blue-400 mb-2">{{ $t('providers.config_guide', { class: activeClassName }) }}</p>
             <div v-for="field in currentGuide" :key="field.key" class="flex gap-2">
               <code class="shrink-0 font-mono text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/20 px-1.5 py-0.5 rounded">{{ field.key }}</code>
               <span class="text-blue-700 dark:text-blue-400">
@@ -150,11 +150,11 @@
           <div class="flex justify-end gap-2 pt-2">
             <button type="button" @click="closeModal"
               class="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">
-              Hủy
+              {{ $t('common.cancel') }}
             </button>
             <button type="submit" :disabled="saving"
               class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 transition-colors">
-              {{ saving ? 'Đang lưu...' : (modal.editing ? 'Lưu thay đổi' : 'Tạo Provider') }}
+              {{ saving ? $t('settings.saving') : (modal.editing ? $t('common.save') : $t('providers.create_provider')) }}
             </button>
           </div>
         </form>
@@ -171,7 +171,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { apiFetch } from '@/utils/api.js';
+
+const { t } = useI18n();
 
 const CONFIG_GUIDES = {
   'IbshiErpSSOProvider': {
@@ -287,7 +290,7 @@ async function submitModal() {
     try {
       config = JSON.parse(form.value.configJson);
     } catch {
-      configError.value = 'JSON không hợp lệ';
+      configError.value = t('providers.invalid_json');
       return;
     }
   }
@@ -320,12 +323,12 @@ async function submitModal() {
 
     if (!res.ok) {
       const err = await res.json();
-      showToast(false, err.error || 'Có lỗi xảy ra');
+      showToast(false, err.error || t('providers.save_failed'));
       return;
     }
     closeModal();
     await loadProviders(pagination.value.page);
-    showToast(true, modal.value.editing ? 'Đã cập nhật provider' : 'Đã tạo provider');
+    showToast(true, t('providers.save_success'));
   } finally {
     saving.value = false;
   }
@@ -336,23 +339,23 @@ async function testProvider(p) {
   try {
     const res = await apiFetch(`/api/system/providers/${p.id}/test`, { method: 'POST' });
     const json = await res.json();
-    showToast(json.ok, json.message || (json.ok ? 'Kết nối thành công' : 'Kết nối thất bại'));
+    showToast(json.ok, json.message || (json.ok ? t('providers.test_success') : t('providers.test_failed')));
   } catch {
-    showToast(false, 'Lỗi khi test provider');
+    showToast(false, t('providers.test_failed'));
   } finally {
     testingId.value = null;
   }
 }
 
 async function confirmDelete(p) {
-  if (!confirm(`Vô hiệu hóa provider "${p.name}"?`)) return;
+  if (!confirm(t('providers.delete_confirm'))) return;
   try {
     const res = await apiFetch(`/api/system/providers/${p.id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
     await loadProviders(pagination.value.page);
-    showToast(true, 'Đã vô hiệu hóa provider');
+    showToast(true, t('providers.save_success'));
   } catch {
-    showToast(false, 'Có lỗi khi xóa provider');
+    showToast(false, t('providers.save_failed'));
   }
 }
 

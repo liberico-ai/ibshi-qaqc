@@ -6,7 +6,7 @@
        @focus="showDropdown = true" 
        @blur="hideDropdownDelay" 
        class="w-full bg-slate-50 dark:bg-[#0f1117] border border-gray-200 dark:border-[#252540] rounded-lg px-4 py-2.5 text-sm dark:text-white" 
-       :placeholder="placeholder || 'Type to search member name or phone...'"
+       :placeholder="placeholder || $t('member.search_placeholder')"
     >
     <div v-if="showDropdown && membersList.length > 0" class="absolute z-10 w-full mt-1 bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-[#252540] rounded-lg shadow-xl max-h-48 overflow-y-auto">
        <div 
@@ -20,8 +20,8 @@
        </div>
     </div>
     <div v-if="modelValue" class="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium break-all flex items-center justify-between">
-      <span>Selected ID: {{ modelValue }}</span>
-      <button type="button" @click="clearSelection" class="text-red-500 hover:text-red-700 ml-2" title="Clear">
+      <span>{{ $t('member.selected_id', { id: modelValue }) }}</span>
+      <button type="button" @click="clearSelection" class="text-red-500 hover:text-red-700 ml-2" :title="$t('member.clear')">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>

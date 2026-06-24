@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Import Tiêu Chuẩn PDF</h2>
+      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">{{ $t('qaqcMore.import_title') }}</h2>
     </div>
 
     <!-- Drop zone -->
@@ -15,36 +15,36 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
         </svg>
-        <p class="text-slate-600 dark:text-slate-400 text-sm mb-1">Kéo thả file PDF hoặc</p>
+        <p class="text-slate-600 dark:text-slate-400 text-sm mb-1">{{ $t('qaqcMore.drop_pdf_hint') }}</p>
         <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Chọn file
+          {{ $t('qaqcMore.choose_file') }}
           <input type="file" multiple accept=".pdf" class="hidden" @change="onFileInput">
         </label>
-        <p class="mt-2 text-xs text-slate-400">Tối đa 20 file · 50MB/file · Chỉ PDF</p>
+        <p class="mt-2 text-xs text-slate-400">{{ $t('qaqcMore.import_limit_hint') }}</p>
       </div>
 
       <!-- Selected files queue -->
       <div v-if="pending.length" class="mt-4 space-y-2">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ pending.length }} file sẵn sàng</span>
-          <button @click="pending = []" class="text-xs text-red-500 hover:text-red-700">Xóa tất cả</button>
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $t('qaqcMore.files_ready', { count: pending.length }) }}</span>
+          <button @click="pending = []" class="text-xs text-red-500 hover:text-red-700">{{ $t('qaqcMore.clear_all') }}</button>
         </div>
 
         <!-- Metadata fields -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           <div>
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Nhóm tiêu chuẩn</label>
-            <input v-model="meta.family" placeholder="VD: ASTM, TCVN, ISO"
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{{ $t('qaqcMore.std_family_label') }}</label>
+            <input v-model="meta.family" :placeholder="$t('qaqcMore.std_family_placeholder')"
               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Năm ban hành</label>
-            <input v-model="meta.year" type="number" placeholder="VD: 2023"
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{{ $t('qaqcMore.issue_year_label') }}</label>
+            <input v-model="meta.year" type="number" :placeholder="$t('qaqcMore.issue_year_placeholder')"
               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Ngôn ngữ</label>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{{ $t('qaqcMore.language_label') }}</label>
             <select v-model="meta.language"
               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
               <option value="EN">English</option>
@@ -65,7 +65,7 @@
 
         <button @click="startImport" :disabled="uploading"
           class="w-full mt-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
-          {{ uploading ? 'Đang gửi...' : `Bắt đầu import ${pending.length} file` }}
+          {{ uploading ? $t('qaqcMore.sending') : $t('qaqcMore.start_import_files', { count: pending.length }) }}
         </button>
       </div>
     </div>
@@ -73,10 +73,10 @@
     <!-- Jobs table -->
     <div class="card p-0 overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Lịch sử Import</h3>
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $t('qaqcMore.import_history') }}</h3>
         <div class="flex items-center gap-2">
           <select v-model="filterStatus" @change="loadJobs" class="text-xs border border-gray-200 dark:border-[#252540] rounded-lg px-2 py-1 bg-white dark:bg-[#12122a] text-gray-700 dark:text-gray-300">
-            <option value="">Tất cả</option>
+            <option value="">{{ $t('common.all') }}</option>
             <option value="QUEUED">QUEUED</option>
             <option value="EXTRACTING">EXTRACTING</option>
             <option value="CHUNKING">CHUNKING</option>
@@ -85,7 +85,7 @@
             <option value="FAILED">FAILED</option>
           </select>
           <button @click="loadJobs" class="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg">
-            Làm mới
+            {{ $t('common.refresh') }}
           </button>
         </div>
       </div>
@@ -94,20 +94,20 @@
         <thead>
           <tr class="bg-slate-50 dark:bg-[#1a1a2e] border-b border-slate-200 dark:border-slate-800">
             <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">File</th>
-            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Trạng thái</th>
-            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Tiến độ</th>
-            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Chunks</th>
-            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Tiêu chuẩn</th>
-            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Thời gian</th>
-            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400 text-right">Hành động</th>
+            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">{{ $t('common.status') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_progress') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_chunks') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_standard') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_time') }}</th>
+            <th class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400 text-right">{{ $t('common.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
           <tr v-if="jobsLoading">
-            <td colspan="7" class="px-4 py-8 text-center text-slate-500">Đang tải...</td>
+            <td colspan="7" class="px-4 py-8 text-center text-slate-500">{{ $t('common.loading') }}</td>
           </tr>
           <tr v-else-if="!jobs.length">
-            <td colspan="7" class="px-4 py-8 text-center text-slate-500">Chưa có import nào</td>
+            <td colspan="7" class="px-4 py-8 text-center text-slate-500">{{ $t('qaqcMore.import_empty') }}</td>
           </tr>
           <tr v-for="job in jobs" :key="job.id" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
             <td class="px-4 py-3 max-w-xs truncate text-slate-700 dark:text-slate-300 font-mono text-xs">{{ job.filename }}</td>
@@ -135,12 +135,12 @@
             <td class="px-4 py-3 text-right">
               <button v-if="job.status === 'FAILED'" @click="retryJob(job.id)"
                 class="text-xs px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-800/60 text-amber-700 dark:text-amber-400 rounded font-medium">
-                Thử lại
+                {{ $t('qaqcMore.retry') }}
               </button>
               <span v-if="job.status === 'FAILED' && job.error_msg" class="ml-2 text-xs text-red-500" :title="job.error_msg">⚠</span>
               <span v-if="job.status === 'DONE' && job.standard_id"
                 class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded">
-                ✓ Indexed
+                ✓ {{ $t('qaqcMore.indexed') }}
               </span>
             </td>
           </tr>
@@ -148,15 +148,15 @@
       </table>
 
       <div class="px-4 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-        <span>Tổng: {{ total }} jobs</span>
+        <span>{{ $t('qaqcMore.total_jobs', { total }) }}</span>
         <div class="flex gap-2">
           <button :disabled="offset === 0" @click="offset = Math.max(0, offset - limit); loadJobs()"
             class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800">
-            ← Trước
+            ← {{ $t('common.previous') }}
           </button>
           <button :disabled="offset + limit >= total" @click="offset += limit; loadJobs()"
             class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800">
-            Sau →
+            {{ $t('common.next') }} →
           </button>
         </div>
       </div>
@@ -164,7 +164,7 @@
 
     <!-- Auto-refresh when active jobs -->
     <div v-if="hasActiveJobs" class="text-center text-xs text-slate-400">
-      Đang xử lý — tự động làm mới sau {{ countdown }}s
+      {{ $t('qaqcMore.auto_refresh_hint', { seconds: countdown }) }}
     </div>
   </div>
 </template>
@@ -172,6 +172,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { apiFetch } from '@/utils/api.js';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 async function apiGet(url) {
   const res = await apiFetch(url);
@@ -244,7 +247,7 @@ async function startImport() {
     await loadJobs();
     startAutoRefresh();
   } catch (e) {
-    alert(e.message ?? 'Upload thất bại');
+    alert(e.message ?? t('qaqcMore.upload_failed'));
   } finally {
     uploading.value = false;
   }

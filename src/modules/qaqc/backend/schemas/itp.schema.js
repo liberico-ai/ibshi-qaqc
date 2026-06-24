@@ -35,6 +35,8 @@ export const addITPItemSchema = z.object({
 export const itpTransitionSchema = z.object({
   targetStatus: z.string().min(1).max(30),
   comment: z.string().max(500).optional(),
+  // PIN ký số — bắt buộc khi phê duyệt (MANAGER_APPROVED / DIRECTOR_APPROVED).
+  pin: z.string().min(4).max(12).optional(),
 });
 
 export const itpCopySchema = z.object({

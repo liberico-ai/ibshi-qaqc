@@ -1,6 +1,7 @@
 import { registerSystemActions } from './actions.js';
 import { registerSystemRoutes } from './routes.js';
 import { registerSystemMenus } from './menus.js';
+import { registerMenuConsolidation } from './menuConsolidation.js';
 import { registerSystemCronjobs } from './cronjobs.js';
 import { SettingsService } from '../../../core/settings.js';
 import { auditLog } from '../../../core/audit-log.js';
@@ -42,6 +43,7 @@ export default async function registerSystemModule(app) {
   providerRegistry.register('notification-email',      EmailChannelProvider,      'system', 'Email notification channel (stub)');
 
   registerSystemMenus();
+  registerMenuConsolidation();   // hợp nhất menu 5 nhóm theo mockup (chạy sau cùng)
   registerSystemRoutes(app);
   registerSystemCronjobs();
 

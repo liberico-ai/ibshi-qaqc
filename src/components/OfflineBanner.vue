@@ -7,11 +7,11 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
-      <span>Hết hạn offline (2 giờ). Vui lòng đăng nhập lại để đồng bộ.</span>
+      <span>{{ $t('offline.expired') }}</span>
     </div>
     <button @click="clearExpiredAndLogout"
       class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-medium transition-colors">
-      Đăng nhập lại
+      {{ $t('offline.login_again') }}
     </button>
   </div>
 
@@ -25,23 +25,23 @@
         class="w-2 h-2 rounded-full flex-shrink-0"/>
 
       <span v-if="!isOnline && pendingCount > 0">
-        Đang offline — {{ pendingCount }} thao tác chờ đồng bộ
+        {{ $t('offline.offline_pending', { count: pendingCount }) }}
       </span>
       <span v-else-if="!isOnline">
-        Đang offline — thao tác sẽ được lưu và đồng bộ khi có mạng
+        {{ $t('offline.offline_no_pending') }}
       </span>
       <span v-else-if="isSyncing">
-        Đang đồng bộ {{ pendingCount }} thao tác...
+        {{ $t('offline.syncing', { count: pendingCount }) }}
       </span>
       <span v-else>
-        {{ pendingCount }} thao tác chờ đồng bộ
+        {{ $t('offline.pending', { count: pendingCount }) }}
       </span>
     </div>
 
     <button v-if="isOnline && pendingCount > 0 && !isSyncing"
       @click="syncNow"
       class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-medium transition-colors">
-      Đồng bộ ngay
+      {{ $t('offline.sync_now') }}
     </button>
   </div>
 
@@ -52,7 +52,7 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
       </svg>
-      <span>Đã đồng bộ thành công</span>
+      <span>{{ $t('offline.synced') }}</span>
     </div>
   </Transition>
 </template>

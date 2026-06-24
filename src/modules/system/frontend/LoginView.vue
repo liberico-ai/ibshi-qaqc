@@ -8,17 +8,17 @@
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 mx-auto mb-4">
           <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
         </div>
-        <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Welcome Back</h2>
-        <p class="text-sm text-slate-500 dark:text-gray-400 mt-2">Sign in to the Operations Platform to continue.</p>
+        <h2 class="text-2xl font-bold text-slate-800 dark:text-white">{{ $t('auth.welcome_back') }}</h2>
+        <p class="text-sm text-slate-500 dark:text-gray-400 mt-2">{{ $t('auth.signin_subtitle') }}</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-5">
         <div>
-          <label class="block text-[13px] font-semibold text-slate-700 dark:text-gray-300 mb-1.5">Tài Khoản</label>
-          <input v-model="form.username" required type="text" class="w-full input-base" placeholder="Enter your username">
+          <label class="block text-[13px] font-semibold text-slate-700 dark:text-gray-300 mb-1.5">{{ $t('auth.username') }}</label>
+          <input v-model="form.username" required type="text" class="w-full input-base" :placeholder="$t('auth.username_placeholder')">
         </div>
         <div>
-          <label class="block text-[13px] font-semibold text-slate-700 dark:text-gray-300 mb-1.5">Password</label>
+          <label class="block text-[13px] font-semibold text-slate-700 dark:text-gray-300 mb-1.5">{{ $t('auth.password') }}</label>
           <input v-model="form.password" required type="password" class="w-full input-base" placeholder="••••••••">
         </div>
 
@@ -29,7 +29,7 @@
 
         <button :disabled="loading" type="submit" class="w-full btn-primary mt-4">
           <svg v-if="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-          <span>{{ loading ? 'Signing in...' : 'Sign In' }}</span>
+          <span>{{ loading ? $t('auth.signing_in') : $t('auth.sign_in') }}</span>
         </button>
       </form>
     </div>
@@ -38,6 +38,9 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const emit = defineEmits(['success']);
 
@@ -55,7 +58,7 @@ async function handleLogin() {
       body: JSON.stringify(form.value),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
+    if (!res.ok) throw new Error(data.error || t('auth.login_failed'));
     emit('success', data);
   } catch (e) {
     errorMessage.value = e.message;

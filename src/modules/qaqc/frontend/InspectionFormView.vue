@@ -59,6 +59,8 @@
 
     <div v-if="toast.show" :class="toast.ok ? 'bg-green-600' : 'bg-red-600'"
       class="fixed bottom-5 right-5 z-50 text-white text-sm px-4 py-3 rounded-lg shadow-lg">{{ toast.message }}</div>
+
+    <SignatureCeremony v-model="showSignature" @confirm="onSignConfirm" />
   </div>
 </template>
 
@@ -66,6 +68,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import InspectionRevisionView from './InspectionRevisionView.vue';
+import SignatureCeremony from '@/components/SignatureCeremony.vue';
 import { useRoute } from 'vue-router';
 import { offlineFormStore } from '@/core/offline-form-store.js';
 
@@ -76,6 +79,7 @@ const loading = ref(false);
 const saving = ref(false);
 const signing = ref(false);
 const hasDraft = ref(false);
+const showSignature = ref(false);
 const toast = ref({ show: false, ok: true, message: '' });
 
 let autoSaveTimer = null;
@@ -163,12 +167,17 @@ async function saveResults() {
   }
 }
 
-async function sign() {
+// Mở nghi thức ký số (nhập PIN) trước khi gửi yêu cầu ký.
+function sign() {
+  showSignature.value = true;
+}
+
+async function onSignConfirm(pin) {
   signing.value = true;
   try {
     const res = await apiFetch(`/api/qaqc/inspections/${route.params.id}/sign`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ pin }),
     });
     const data = await res.json();
 

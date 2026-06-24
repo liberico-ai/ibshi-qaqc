@@ -1,6 +1,7 @@
 import { inspectionRepo } from '../repositories/InspectionRepository.js';
 import { AppError } from '../../../../core/errors.js';
 import { pool } from '../../../../core/db.js';
+import { SignatureService } from '../../../system/backend/services/SignatureService.js';
 
 const VALID_TRANSITIONS = {
   PENDING:    ['IN_PROGRESS'],
@@ -16,6 +17,13 @@ export class InspectionService {
     if (insp.status !== 'IN_PROGRESS' && insp.status !== 'COMPLETED') {
       throw new AppError(400, 'Inspection must be in progress before signing');
     }
+
+    // Gap-03: chữ ký số bắt buộc xác thực PIN và ghi sổ chữ ký bất biến.
+    await SignatureService.sign(userId, pin, 'inspection', inspectionId, 'sign', {
+      ip_code: insp.ip_code,
+      status_before: insp.status,
+    });
+
     await pool.query(
       'UPDATE qaqc_inspections SET signed_by=$1, signed_at=now(), status=$2, completed_at=now(), updated_at=now() WHERE id=$3',
       [userId, 'COMPLETED', inspectionId]

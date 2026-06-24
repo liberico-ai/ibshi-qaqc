@@ -7,22 +7,22 @@
             <router-link to="/system/settings/roles" class="text-slate-400 hover:text-blue-500 transition-colors bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-[#252540] p-1.5 rounded-lg shadow-sm">
                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </router-link>
-            Permission Management <span v-if="roleName" class="text-blue-600 dark:text-blue-400 ml-1">- {{ roleName }}</span>
+            {{ $t('permissions.title') }} <span v-if="roleName" class="text-blue-600 dark:text-blue-400 ml-1">- {{ roleName }}</span>
          </h2>
-         <p class="text-[13px] text-slate-500 dark:text-gray-400 mt-1.5">Configure action-level access control for this role.</p>
+         <p class="text-[13px] text-slate-500 dark:text-gray-400 mt-1.5">{{ $t('permissions.subtitle') }}</p>
       </div>
 
       <button @click="savePermissions" :disabled="saving" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-[13px] font-semibold px-6 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 flex items-center gap-2 disabled:opacity-50 border border-blue-400/20">
          <svg v-if="saving" class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
          <svg v-else class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-         {{ saving ? 'Saving...' : 'Save Permissions' }}
+         {{ saving ? $t('permissions.saving') : $t('permissions.save') }}
       </button>
     </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 dark:text-gray-500">
        <svg class="w-8 h-8 animate-spin mb-3 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-       Loading permissions map...
+       {{ $t('permissions.loading') }}
     </div>
 
     <!-- Grid content -->
@@ -37,7 +37,7 @@
                  {{ moduleName }}
                </div>
                <button @click="toggleModule(acts)" class="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 focus:outline-none transition-colors">
-                 {{ isAllSelected(acts) ? 'Deselect All' : 'Select All' }}
+                 {{ isAllSelected(acts) ? $t('permissions.deselect_all') : $t('permissions.select_all') }}
                </button>
              </h4>
              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -62,11 +62,13 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from '@/composables/useToast.js';
+import { useI18n } from 'vue-i18n';
 import { apiFetch } from "@/utils/api.js";
 
 const route = useRoute();
 const router = useRouter();
 const { success, error } = useToast();
+const { t } = useI18n();
 
 const roleId = route.params.id;
 const roleName = ref('');
@@ -91,7 +93,7 @@ const loadData = async () => {
      const rolesList = rolesBody.data || rolesBody;
      const currentRole = rolesList.find(r => r.id == roleId);
      if (!currentRole) {
-        error("Role not found");
+        error(t('permissions.load_failed'));
         router.push('/system/settings/roles');
         return;
      }
@@ -105,7 +107,7 @@ const loadData = async () => {
      availableActions.value = actions;
 
    } catch(e) {
-     error("Failed to load permissions");
+     error(t('permissions.load_failed'));
      console.error(e);
    } finally {
      loading.value = false;
@@ -122,13 +124,13 @@ const savePermissions = async () => {
       });
 
       if (res.ok) {
-         success("Permissions saved successfully!");
+         success(t('permissions.save_success'));
       } else {
          const err = await res.json();
-         error(err.error || "Failed to save permissions");
+         error(err.error || t('permissions.load_failed'));
       }
    } catch(e) {
-      error("Network error saving permissions");
+      error(t('permissions.load_failed'));
    } finally {
       saving.value = false;
    }

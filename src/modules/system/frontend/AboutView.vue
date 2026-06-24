@@ -2,25 +2,25 @@
   <div class="max-w-4xl mx-auto space-y-6">
 
     <div v-if="loading" class="card p-12 text-center text-slate-500 dark:text-gray-500 animate-pulse">
-      Đang tải thông tin hệ thống...
+      {{ $t('about.loading') }}
     </div>
 
     <div v-else-if="info" class="space-y-6">
       <!-- General Info -->
       <div class="card p-6 border-l-4 border-l-blue-500">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-6">Thông Tin Phiên Bản</h3>
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-6">{{ $t('about.version_info') }}</h3>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="space-y-1">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Phiên Bản Phát Hành</span>
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">{{ $t('about.release_version') }}</span>
             <div class="text-base font-medium text-slate-800 dark:text-gray-200">v{{ info.version }}</div>
           </div>
           <div class="space-y-1">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Git Hash (Revision)</span>
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">{{ $t('about.git_hash') }}</span>
             <div class="text-base font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-md inline-block">{{ info.git_hash }}</div>
           </div>
           <div class="space-y-1">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Thời Gian Cập Nhật</span>
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">{{ $t('about.updated_time') }}</span>
             <div class="text-base font-medium text-slate-800 dark:text-gray-200">{{ formatTime(info.build_time) }}</div>
           </div>
         </div>
@@ -31,7 +31,7 @@
         <div class="px-6 py-4 border-b border-gray-200 dark:border-[#252540] bg-slate-50/50 dark:bg-transparent">
           <h3 class="text-base font-bold text-slate-800 dark:text-white relative pl-3">
             <span class="absolute left-0 top-1.5 bottom-1.5 w-1 bg-indigo-500 rounded-full"></span>
-            Thư Viện (Dependencies)
+            {{ $t('about.dependencies') }}
           </h3>
         </div>
         <div class="p-6">

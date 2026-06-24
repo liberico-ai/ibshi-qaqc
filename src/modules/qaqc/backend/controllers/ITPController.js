@@ -44,8 +44,8 @@ export class ITPController {
   }
 
   static async approve(req, res) {
-    const { targetStatus } = req.validated ?? req.body;
-    const record = await ITPWorkflowService.transition(req.params.id, targetStatus, req.user?.id);
+    const { targetStatus, pin } = req.validated ?? req.body;
+    const record = await ITPWorkflowService.transition(req.params.id, targetStatus, req.user?.id, pin);
     res.json({ data: record });
   }
 

@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between">
-      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Lịch sử revision</h3>
+      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $t('inspection.revision.title') }}</h3>
       <button v-if="canRevise" @click="openRevise"
         class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-        + Tạo revision
+        {{ $t('qaqcMore.create_revision') }}
       </button>
     </div>
 
@@ -13,59 +13,59 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-slate-50 dark:bg-[#1a1a2e] border-b border-slate-200 dark:border-slate-800">
-            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Rev</th>
-            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Trạng thái</th>
-            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Người thực hiện</th>
-            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Thời gian</th>
-            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Lý do</th>
-            <th class="px-3 py-2 text-center font-semibold text-slate-600 dark:text-slate-400">So sánh</th>
+            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_rev') }}</th>
+            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">{{ $t('common.status') }}</th>
+            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_editor') }}</th>
+            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_time') }}</th>
+            <th class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_reason') }}</th>
+            <th class="px-3 py-2 text-center font-semibold text-slate-600 dark:text-slate-400">{{ $t('qaqcMore.col_compare') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-          <tr v-if="loading"><td colspan="6" class="px-3 py-6 text-center text-slate-500">Đang tải...</td></tr>
-          <tr v-else-if="!revisions.length"><td colspan="6" class="px-3 py-6 text-center text-slate-400">Chưa có revision</td></tr>
+          <tr v-if="loading"><td colspan="6" class="px-3 py-6 text-center text-slate-500">{{ $t('common.loading') }}</td></tr>
+          <tr v-else-if="!revisions.length"><td colspan="6" class="px-3 py-6 text-center text-slate-400">{{ $t('qaqcMore.revisions_empty') }}</td></tr>
           <tr v-for="rev in revisions" :key="rev.id" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
             <td class="px-3 py-2">
               <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">v{{ rev.revision }}</span>
-              <span v-if="rev.is_current" class="ml-2 px-1.5 py-0.5 text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded">hiện hành</span>
+              <span v-if="rev.is_current" class="ml-2 px-1.5 py-0.5 text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded">{{ $t('qaqcMore.current_badge') }}</span>
             </td>
             <td class="px-3 py-2 text-slate-600 dark:text-slate-400">{{ rev.status ?? '—' }}</td>
             <td class="px-3 py-2 text-slate-600 dark:text-slate-400">{{ rev.editor_name ?? '—' }}</td>
             <td class="px-3 py-2 text-slate-500 text-xs">{{ fmt(rev.created_at) }}</td>
             <td class="px-3 py-2 text-slate-500 text-xs max-w-xs truncate" :title="rev.revision_reason">
-              {{ rev.revision_reason ?? (rev.revision === 1 ? 'Bản gốc' : '—') }}
+              {{ rev.revision_reason ?? (rev.revision === 1 ? $t('qaqcMore.original_reason') : '—') }}
             </td>
             <td class="px-3 py-2 text-center">
               <input type="radio" name="diff-from" :value="rev.id" v-model="diffFromId"
-                class="mr-1 w-3 h-3 accent-blue-600" title="Từ"/>
+                class="mr-1 w-3 h-3 accent-blue-600" :title="$t('qaqcMore.diff_from')"/>
               <input type="radio" name="diff-to" :value="rev.id" v-model="diffToId"
-                class="w-3 h-3 accent-indigo-600" title="Đến"/>
+                class="w-3 h-3 accent-indigo-600" :title="$t('qaqcMore.diff_to')"/>
             </td>
           </tr>
         </tbody>
       </table>
       <div v-if="revisions.length > 1" class="px-3 py-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
-        <span class="text-xs text-slate-400">Chọn 2 revision để so sánh</span>
+        <span class="text-xs text-slate-400">{{ $t('qaqcMore.select_two_revisions') }}</span>
         <button @click="doDiff" :disabled="!diffFromId || !diffToId || diffFromId === diffToId"
           class="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-lg">
-          So sánh
+          {{ $t('qaqcMore.compare') }}
         </button>
       </div>
     </div>
 
     <!-- Diff viewer -->
     <div v-if="diff" class="card p-4 space-y-3">
-      <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-300">So sánh</h4>
-      <div v-if="!diff.fields.length && !diff.results.length" class="text-sm text-slate-400 italic">Không có khác biệt.</div>
+      <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $t('qaqcMore.compare') }}</h4>
+      <div v-if="!diff.fields.length && !diff.results.length" class="text-sm text-slate-400 italic">{{ $t('qaqcMore.no_diff') }}</div>
 
       <div v-if="diff.fields.length" class="space-y-1">
-        <div class="text-xs font-medium text-slate-500 uppercase">Fields</div>
+        <div class="text-xs font-medium text-slate-500 uppercase">{{ $t('qaqcMore.diff_fields') }}</div>
         <table class="w-full text-xs">
           <thead>
             <tr class="text-slate-500">
-              <th class="text-left py-1">Field</th>
-              <th class="text-left py-1">Cũ</th>
-              <th class="text-left py-1">Mới</th>
+              <th class="text-left py-1">{{ $t('qaqcMore.col_field') }}</th>
+              <th class="text-left py-1">{{ $t('qaqcMore.col_old') }}</th>
+              <th class="text-left py-1">{{ $t('qaqcMore.col_new') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -79,7 +79,7 @@
       </div>
 
       <div v-if="diff.results.length" class="space-y-1">
-        <div class="text-xs font-medium text-slate-500 uppercase">Checkpoints</div>
+        <div class="text-xs font-medium text-slate-500 uppercase">{{ $t('qaqcMore.diff_checkpoints') }}</div>
         <div v-for="r in diff.results" :key="r.checkpoint_id" class="text-xs p-2 rounded"
           :class="{
             'bg-green-50 dark:bg-green-900/20': r.change === 'added',
@@ -102,19 +102,19 @@
       <div v-if="reviseModal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" @click="reviseModal.show = false"></div>
         <div class="relative z-10 w-full max-w-md bg-white dark:bg-[#1a1a2e] rounded-xl shadow-2xl p-5 space-y-4">
-          <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">Tạo revision mới</h3>
-          <p class="text-xs text-slate-500">Mô tả rõ lý do thay đổi (tối thiểu 20 ký tự). Revision cũ được giữ nguyên để audit.</p>
+          <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ $t('qaqcMore.create_revision_modal') }}</h3>
+          <p class="text-xs text-slate-500">{{ $t('qaqcMore.revision_reason_hint') }}</p>
           <textarea v-model="reviseModal.reason" rows="4"
-            placeholder="VD: Phát hiện spatter tại mối hàn W-03, cập nhật kết quả CP02 từ PASS → FAIL"
+            :placeholder="$t('qaqcMore.revision_reason_placeholder')"
             class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none resize-none"></textarea>
           <div class="text-xs" :class="reviseModal.reason.length >= 20 ? 'text-green-600 dark:text-green-400' : 'text-amber-500'">
-            {{ reviseModal.reason.length }}/20 ký tự
+            {{ $t('qaqcMore.chars_count', { count: reviseModal.reason.length }) }}
           </div>
           <div class="flex justify-end gap-2">
-            <button @click="reviseModal.show = false" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400">Hủy</button>
+            <button @click="reviseModal.show = false" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400">{{ $t('common.cancel') }}</button>
             <button @click="submitRevise" :disabled="reviseModal.reason.length < 20 || reviseModal.saving"
               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded-lg">
-              {{ reviseModal.saving ? 'Đang tạo...' : 'Tạo revision' }}
+              {{ reviseModal.saving ? $t('qaqcMore.creating_revision') : $t('inspection.revision.create') }}
             </button>
           </div>
         </div>
@@ -126,6 +126,9 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import { apiFetch } from '@/utils/api.js';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = defineProps({
   inspectionId: { type: String, required: true },
@@ -182,7 +185,7 @@ async function submitRevise() {
       emit('revised');
     } else {
       const err = await res.json();
-      alert(err.error ?? 'Tạo revision thất bại');
+      alert(err.error ?? t('qaqcMore.create_revision_failed'));
     }
   } finally {
     reviseModal.saving = false;

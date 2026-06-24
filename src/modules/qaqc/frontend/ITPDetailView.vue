@@ -1,84 +1,79 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center gap-3">
-      <router-link to="/qaqc/itp" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      </router-link>
-      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
-        ITP — {{ plan?.product_type }} v{{ plan?.version }}
-      </h2>
-      <span v-if="plan" class="px-2 py-0.5 rounded-full text-xs font-medium" :class="statusClass(plan.status)">{{ plan.status }}</span>
-    </div>
+    <PageHeader :title="`ITP — ${plan?.product_type ?? ''} v${plan?.version ?? ''}`">
+      <template #actions>
+        <StatusTag v-if="plan" :type="statusTagType(plan.status)" :label="plan.status" />
+        <router-link to="/qaqc/itp" class="btn btn-outline btn-sm">← Quay lại</router-link>
+      </template>
+    </PageHeader>
 
     <div v-if="loading" class="card p-8 text-center text-slate-500">Đang tải...</div>
     <template v-else-if="plan">
       <!-- Actions -->
       <div v-can="'qaqc.itp.write'" class="flex gap-2 flex-wrap">
-        <button v-if="plan.status === 'DRAFT'" @click="transition('UNDER_REVIEW')"
-          class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">Gửi duyệt</button>
-        <button v-if="plan.status === 'UNDER_REVIEW'" v-can="'qaqc.itp.approve'" @click="transition('MANAGER_APPROVED')"
-          class="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">Manager Approve</button>
-        <button v-if="plan.status === 'MANAGER_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('DIRECTOR_APPROVED')"
-          class="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">Director Approve</button>
-        <button v-if="plan.status === 'DIRECTOR_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('ACTIVE')"
-          class="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">Kích hoạt</button>
-        <button v-can="'qaqc.itp.write'" @click="copy"
-          class="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">Copy sang dự án khác</button>
+        <button v-if="plan.status === 'DRAFT'" @click="transition('UNDER_REVIEW')" class="btn btn-primary btn-sm">Gửi duyệt</button>
+        <button v-if="plan.status === 'UNDER_REVIEW'" v-can="'qaqc.itp.approve'" @click="transition('MANAGER_APPROVED')" class="btn btn-primary btn-sm">Manager Approve</button>
+        <button v-if="plan.status === 'MANAGER_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('DIRECTOR_APPROVED')" class="btn btn-primary btn-sm">Director Approve</button>
+        <button v-if="plan.status === 'DIRECTOR_APPROVED'" v-can="'qaqc.itp.approve'" @click="transition('ACTIVE')" class="btn btn-success btn-sm">Kích hoạt</button>
+        <button v-can="'qaqc.itp.write'" @click="copy" class="btn btn-outline btn-sm">Copy sang dự án khác</button>
       </div>
 
       <!-- Items -->
-      <div class="card p-0 overflow-hidden">
-        <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <span class="font-semibold text-sm text-slate-700 dark:text-slate-300">Danh sách Inspection Points ({{ plan.items?.length ?? 0 }})</span>
-          <button v-if="plan.status === 'DRAFT'" v-can="'qaqc.itp.write'" @click="openAddItem"
-            class="flex items-center gap-1 px-2.5 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+      <UiCard body-class="p-0">
+        <template #header>
+          <div class="card-title">Danh sách Inspection Points ({{ plan.items?.length ?? 0 }})</div>
+        </template>
+        <template #actions>
+          <button v-if="plan.status === 'DRAFT'" v-can="'qaqc.itp.write'" @click="openAddItem" class="btn btn-primary btn-sm">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Thêm IP
           </button>
+        </template>
+        <div class="overflow-x-auto">
+          <table class="qc-table">
+            <thead>
+              <tr>
+                <th class="w-12">Seq</th>
+                <th>IP Code</th>
+                <th>Mô tả</th>
+                <th class="text-center">Hold Type</th>
+                <th class="text-center">Hold Status</th>
+                <th>Checkpoints</th>
+                <th v-if="plan.status === 'DRAFT'"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!plan.items?.length"><td colspan="7" class="text-center text-slate-500 py-6">Chưa có IP — nhấn "Thêm IP" để bắt đầu</td></tr>
+              <tr v-for="item in plan.items" :key="item.id">
+                <td class="text-center font-medium">{{ item.seq }}</td>
+                <td class="font-mono text-xs">{{ item.ip_code ?? '—' }}</td>
+                <td class="max-w-xs">{{ item.description ?? '—' }}</td>
+                <td class="text-center">
+                  <StatusTag v-if="holdTypeOf(item) === 'H'" type="red" label="H" />
+                  <StatusTag v-else-if="holdTypeOf(item) === 'HC'" type="amber" label="HC" />
+                  <StatusTag v-else-if="holdTypeOf(item) === 'W' || item.witness_flag" type="blue" label="W" />
+                  <span v-else class="text-slate-300 dark:text-slate-600">—</span>
+                </td>
+                <td class="text-center">
+                  <template v-if="['H','HC'].includes(holdTypeOf(item))">
+                    <StatusTag v-if="holdStatus[item.id]?.released" type="green" label="Released" />
+                    <button v-else-if="plan.status === 'ACTIVE'" v-can="'qaqc.itp.approve'"
+                      @click="openRelease(item)" class="btn btn-danger btn-sm">
+                      Pending — Release
+                    </button>
+                    <StatusTag v-else type="red" label="Pending" />
+                  </template>
+                  <span v-else class="text-slate-300 dark:text-slate-600">—</span>
+                </td>
+                <td class="text-slate-500 text-xs">{{ item.checkpoints?.length ?? 0 }} checkpoint(s)</td>
+                <td v-if="plan.status === 'DRAFT'" class="text-right">
+                  <button @click="deleteItem(item.id)" class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400">Xóa</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <table class="w-full text-sm">
-          <thead><tr class="bg-slate-50 dark:bg-[#1a1a2e]">
-            <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400 w-12">Seq</th>
-            <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400">IP Code</th>
-            <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400">Mô tả</th>
-            <th class="px-4 py-2 text-center text-slate-600 dark:text-slate-400">Hold Type</th>
-            <th class="px-4 py-2 text-center text-slate-600 dark:text-slate-400">Hold Status</th>
-            <th class="px-4 py-2 text-left text-slate-600 dark:text-slate-400">Checkpoints</th>
-          <th v-if="plan.status === 'DRAFT'" class="px-4 py-2"></th>
-          </tr></thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-            <tr v-if="!plan.items?.length"><td colspan="7" class="px-4 py-6 text-center text-slate-500">Chưa có IP — nhấn "Thêm IP" để bắt đầu</td></tr>
-            <tr v-for="item in plan.items" :key="item.id" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-              <td class="px-4 py-2 text-center font-medium text-slate-600 dark:text-slate-400">{{ item.seq }}</td>
-              <td class="px-4 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">{{ item.ip_code ?? '—' }}</td>
-              <td class="px-4 py-2 text-slate-700 dark:text-slate-300 max-w-xs">{{ item.description ?? '—' }}</td>
-              <td class="px-4 py-2 text-center">
-                <span v-if="holdTypeOf(item) === 'H'" class="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">H</span>
-                <span v-else-if="holdTypeOf(item) === 'HC'" class="px-1.5 py-0.5 rounded text-xs bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">HC</span>
-                <span v-else-if="holdTypeOf(item) === 'W' || item.witness_flag" class="px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">W</span>
-                <span v-else class="text-slate-300 dark:text-slate-600">—</span>
-              </td>
-              <td class="px-4 py-2 text-center">
-                <template v-if="['H','HC'].includes(holdTypeOf(item))">
-                  <span v-if="holdStatus[item.id]?.released"
-                    class="px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Released</span>
-                  <button v-else-if="plan.status === 'ACTIVE'" v-can="'qaqc.itp.approve'"
-                    @click="openRelease(item)"
-                    class="px-2 py-0.5 rounded text-xs bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:text-red-400 transition-colors">
-                    Pending — Release
-                  </button>
-                  <span v-else class="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">Pending</span>
-                </template>
-                <span v-else class="text-slate-300 dark:text-slate-600">—</span>
-              </td>
-              <td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">{{ item.checkpoints?.length ?? 0 }} checkpoint(s)</td>
-              <td v-if="plan.status === 'DRAFT'" class="px-4 py-2 text-right">
-                <button @click="deleteItem(item.id)" class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400">Xóa</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      </UiCard>
     </template>
 
     <!-- Add Item modal -->
@@ -190,6 +185,8 @@
 
     <div v-if="toast.show" :class="toast.ok ? 'bg-green-600' : 'bg-red-600'"
       class="fixed bottom-5 right-5 z-50 text-white text-sm px-4 py-3 rounded-lg shadow-lg">{{ toast.message }}</div>
+
+    <SignatureCeremony v-model="showSignature" @confirm="onSignConfirm" />
   </div>
 </template>
 
@@ -198,6 +195,13 @@ import { ref, reactive, onMounted } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import { useRoute } from 'vue-router';
 import { useProjects } from './useProjects.js';
+import SignatureCeremony from '@/components/SignatureCeremony.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import UiCard from '@/components/UiCard.vue';
+import StatusTag from '@/components/StatusTag.vue';
+
+// Các trạng thái phê duyệt cần chữ ký số.
+const SIGN_REQUIRED = new Set(['MANAGER_APPROVED', 'DIRECTOR_APPROVED']);
 
 const route = useRoute();
 const { projects } = useProjects();
@@ -211,6 +215,8 @@ const savingItem = ref(false);
 const itemForm = ref({ ip_code: '', description: '', hold_flag: false, witness_flag: false, acceptance_criteria: '', checkpoints: [] });
 const holdStatus = ref({});
 const releaseModal = reactive({ show: false, itemId: '', ipCode: '', comment: '', isOverride: false });
+const showSignature = ref(false);
+const pendingTargetStatus = ref(null);
 
 function openAddItem() {
   itemForm.value = { ip_code: '', description: '', hold_flag: false, witness_flag: false, acceptance_criteria: '', checkpoints: [] };
@@ -252,16 +258,16 @@ async function deleteItem(itemId) {
   }
 }
 
-const STATUS_COLORS = {
-  DRAFT: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-  UNDER_REVIEW: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
-  MANAGER_APPROVED: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-  DIRECTOR_APPROVED: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400',
-  ACTIVE: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
-  SUPERSEDED: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
-  ARCHIVED: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+const STATUS_TAG_TYPES = {
+  DRAFT: 'gray',
+  UNDER_REVIEW: 'amber',
+  MANAGER_APPROVED: 'blue',
+  DIRECTOR_APPROVED: 'blue',
+  ACTIVE: 'green',
+  SUPERSEDED: 'amber',
+  ARCHIVED: 'gray',
 };
-function statusClass(s) { return STATUS_COLORS[s] ?? ''; }
+function statusTagType(s) { return STATUS_TAG_TYPES[s] ?? 'gray'; }
 
 async function load() {
   loading.value = true;
@@ -315,9 +321,25 @@ async function confirmRelease() {
   }
 }
 
-async function transition(targetStatus) {
+function transition(targetStatus) {
+  // Phê duyệt cần chữ ký số → mở nghi thức ký, ký xong mới gửi.
+  if (SIGN_REQUIRED.has(targetStatus)) {
+    pendingTargetStatus.value = targetStatus;
+    showSignature.value = true;
+    return;
+  }
+  return doTransition(targetStatus, null);
+}
+
+async function onSignConfirm(pin) {
+  const target = pendingTargetStatus.value;
+  pendingTargetStatus.value = null;
+  if (target) await doTransition(target, pin);
+}
+
+async function doTransition(targetStatus, pin) {
   const endpoint = targetStatus === 'UNDER_REVIEW' ? 'submit' : 'approve';
-  const body = endpoint === 'approve' ? { targetStatus } : undefined;
+  const body = endpoint === 'approve' ? { targetStatus, ...(pin && { pin }) } : undefined;
   const res = await apiFetch(`/api/qaqc/itp/${route.params.id}/${endpoint}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,

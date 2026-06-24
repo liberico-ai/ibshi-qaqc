@@ -3,8 +3,10 @@
 DO $$
 BEGIN
   CREATE EXTENSION IF NOT EXISTS vector;
-EXCEPTION WHEN insufficient_privilege OR undefined_file THEN
-  -- extension not installable; AI vector search will not be available
+EXCEPTION WHEN OTHERS THEN
+  -- extension not installable (insufficient_privilege / undefined_file /
+  -- feature_not_supported "extension is not available"); AI vector search
+  -- gracefully falls back to FTS and the embedding column becomes TEXT.
   NULL;
 END $$;
 

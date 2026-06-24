@@ -1,38 +1,40 @@
 <template>
   <LoginView v-if="!isAuthenticated" @success="handleLoginSuccess" />
-  <div v-else class="flex h-screen overflow-hidden bg-slate-50 text-slate-800 dark:bg-[#0f1117] dark:text-slate-300 transition-colors">
-    <aside class="w-[260px] flex-shrink-0 bg-white border-r border-gray-200 dark:bg-[#1a1a2e] dark:border-[#252540] flex flex-col transition-colors">
-      <!-- Logo -->
-      <div class="h-16 flex items-center px-6 border-b border-gray-200 dark:border-[#252540] transition-colors">
+  <div v-else class="flex h-screen overflow-hidden bg-slate-100 text-slate-800 dark:bg-[#0f1117] dark:text-slate-300 transition-colors">
+    <aside class="w-[260px] flex-shrink-0 bg-[#0f172a] text-slate-300 flex flex-col transition-colors">
+      <!-- Logo block: IBS / QA/QC Hub -->
+      <div class="px-5 py-4 border-b border-white/[0.08]">
         <div class="flex items-center gap-3">
-          <div v-if="systemLogo" class="w-8 h-8 rounded-lg shadow-lg flex items-center justify-center overflow-hidden bg-white">
+          <div v-if="systemLogo" class="w-10 h-10 rounded-[10px] flex items-center justify-center overflow-hidden bg-white">
             <img :src="systemLogo" alt="Logo" class="max-w-full max-h-full object-contain">
           </div>
-          <div v-else class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          <div v-else class="w-10 h-10 rounded-[10px] flex items-center justify-center text-white font-extrabold text-base shadow-lg shadow-blue-900/30"
+               style="background: linear-gradient(135deg, var(--primary), var(--primary-light));">
+            IBS
           </div>
           <div>
-            <h1 class="text-[15px] font-bold text-slate-900 dark:text-white tracking-wide">{{ systemName || 'Libe Move' }}</h1>
-            <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Operations Platform</p>
+            <div class="text-[18px] font-bold text-white leading-tight">{{ systemName || 'QA/QC Hub' }}</div>
+            <div class="text-[11px] text-slate-400/80">{{ systemSubtitle }}</div>
           </div>
         </div>
       </div>
-      
+
       <!-- Sidebar Body -->
-      <div class="flex-1 overflow-y-auto py-5">
+      <div class="flex-1 overflow-y-auto py-3">
         <template v-for="(section, sIdx) in menus" :key="section.id || sIdx">
           <template v-if="!section.permission || hasAccess(section.permission)">
-            <div class="section-header" :class="{ 'mt-4': sIdx > 0 }">{{ section.section }}</div>
-            <nav class="space-y-0.5 mb-2">
+            <div class="section-header">{{ section.section }}</div>
+            <nav class="mb-1">
               <template v-for="(item, iIdx) in section.items" :key="iIdx">
-                <!-- Using RouterLink internally for vue-router active states -->
                 <router-link
                   v-if="(!item.permission || hasAccess(item.permission)) && item.to"
                   :to="item.to"
                   class="sidebar-link"
                 >
                   <span v-html="item.icon" class="flex-shrink-0 flex items-center justify-center"></span>
-                  {{ item.label }}
+                  <span class="flex-1 truncate">{{ item.label }}</span>
+                  <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
+                  <span v-else-if="item.tag === 'new'" class="nav-badge-new">NEW</span>
                 </router-link>
                 <a
                   v-else-if="(!item.permission || hasAccess(item.permission)) && item.href"
@@ -40,7 +42,8 @@
                   class="sidebar-link"
                 >
                   <span v-html="item.icon" class="flex-shrink-0 flex items-center justify-center"></span>
-                  {{ item.label }}
+                  <span class="flex-1 truncate">{{ item.label }}</span>
+                  <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
                 </a>
               </template>
             </nav>
@@ -49,7 +52,7 @@
       </div>
 
       <!-- Sidebar Footer / System Info -->
-      <router-link to="/system/about" class="border-t border-gray-200 dark:border-[#252540] p-4 transition-colors flex items-center justify-center text-[11px] font-mono text-slate-400 hover:text-slate-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/[0.02] cursor-pointer group group-hover:underline">
+      <router-link to="/system/about" class="border-t border-white/[0.08] p-4 transition-colors flex items-center justify-center text-[11px] font-mono text-slate-500 hover:text-slate-300 hover:bg-white/[0.03] cursor-pointer group">
         <span v-if="systemInfo.version" class="group-hover:underline">v{{ systemInfo.version }} ({{ systemInfo.git_hash }})</span>
       </router-link>
     </aside>
@@ -57,14 +60,14 @@
     <!-- Content Area -->
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Top Navbar -->
-      <header class="h-16 flex-shrink-0 bg-white/80 dark:bg-[#1a1a2e]/80 backdrop-blur-xl border-b border-gray-200 dark:border-[#252540] flex justify-between items-center px-8 transition-colors z-10">
+      <header class="h-16 flex-shrink-0 bg-white dark:bg-[#1a1a2e]/80 backdrop-blur-xl border-b border-slate-200 dark:border-[#252540] flex justify-between items-center px-8 transition-colors z-10">
         <div class="flex items-center gap-6">
           <!-- Quick Search -->
           <div class="relative group">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="w-4 h-4 text-slate-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
-            <input type="text" placeholder="Search... (Ctrl+K)" class="bg-slate-100 border-gray-200 text-slate-800 placeholder-slate-400 focus:bg-white dark:bg-white/[0.04] dark:border-[#252540] text-[13px] rounded-lg pl-10 pr-4 py-2 w-64 dark:text-gray-300 dark:placeholder-gray-600 focus:outline-none focus:border-blue-500/50 dark:focus:bg-white/[0.06] transition-all">
+            <input type="text" :placeholder="$t('app.search_placeholder')" class="bg-slate-100 border-gray-200 text-slate-800 placeholder-slate-400 focus:bg-white dark:bg-white/[0.04] dark:border-[#252540] text-[13px] rounded-lg pl-10 pr-4 py-2 w-64 dark:text-gray-300 dark:placeholder-gray-600 focus:outline-none focus:border-blue-500/50 dark:focus:bg-white/[0.06] transition-all">
           </div>
         </div>
         
@@ -85,11 +88,11 @@
             <!-- Notifications Dropdown -->
             <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 bg-white dark:bg-[#1a1a2e] rounded-xl shadow-2xl border border-gray-200 dark:border-[#252540] overflow-hidden z-20">
               <div class="p-3 border-b border-gray-200 dark:border-[#252540] flex justify-between items-center bg-gray-50 dark:bg-black/20">
-                <h3 class="font-bold text-sm text-slate-800 dark:text-white">Notifications</h3>
-                <button @click="markAllAsRead" class="text-xs text-blue-500 hover:underline">Mark all read</button>
+                <h3 class="font-bold text-sm text-slate-800 dark:text-white">{{ $t('app.notifications') }}</h3>
+                <button @click="markAllAsRead" class="text-xs text-blue-500 hover:underline">{{ $t('app.mark_all_read') }}</button>
               </div>
               <div class="max-h-80 overflow-y-auto w-full">
-                <div v-if="notifications.length === 0" class="p-4 text-center text-gray-500 text-sm">No notifications</div>
+                <div v-if="notifications.length === 0" class="p-4 text-center text-gray-500 text-sm">{{ $t('app.no_notifications') }}</div>
                 <div v-for="notif in notifications" :key="notif.id" 
                   @click="handleNotificationClick(notif)"
                   class="p-3 border-b border-gray-100 dark:border-[#252540]/50 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer transition select-none"
@@ -125,7 +128,7 @@
 
           <!-- User Info & Logout -->
           <div class="flex items-center gap-2 pl-2">
-            <router-link to="/system/profile" class="flex items-center gap-2 cursor-pointer transition group" title="Hồ Sơ">
+            <router-link to="/system/profile" class="flex items-center gap-2 cursor-pointer transition group" :title="$t('app.profile')">
               <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/20 group-hover:ring-emerald-400 p-0 transition-all">
                 {{ currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U' }}
               </div>
@@ -134,7 +137,7 @@
                 <div class="text-[10px] text-slate-500 mt-0.5">@{{ currentUser?.username }}</div>
               </div>
             </router-link>
-            <button @click="handleLogout" class="text-slate-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-md flex-shrink-0" title="Đăng xuất">
+            <button @click="handleLogout" class="text-slate-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-md flex-shrink-0" :title="$t('app.logout')">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
             </button>
           </div>
@@ -186,6 +189,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { io } from 'socket.io-client'
 import { useToast } from '@/composables/useToast.js'
 import { useAuth } from '@/composables/useAuth.js'
@@ -201,10 +205,12 @@ const showNotifications = ref(false)
 const notifications = ref([])
 const unreadNotifications = ref(0)
 const systemName = ref('')
+const systemSubtitle = ref('IBS Heavy Industry')
 const systemLogo = ref('')
 const systemInfo = ref({})
 let socket = null
 
+const { t } = useI18n()
 const { toasts, removeToast, success, error, info } = useToast()
 const { currentUser, isAuthenticated, setUser, setActions, login, logout, restoreSession, hasAccess } = useAuth()
 
@@ -350,7 +356,7 @@ const handleLoginSuccess = (data) => {
   initSocket();
 
   setTimeout(() => {
-    success(`Welcome back, ${data.user.full_name || data.user.username}!`);
+    success(t('app.welcome_back', { name: data.user.full_name || data.user.username }));
   }, 300);
 };
 

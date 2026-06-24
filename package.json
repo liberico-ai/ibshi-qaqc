@@ -6,6 +6,8 @@
     "db:migrate": "node --env-file=.env scripts/migrate.js",
     "db:init": "node --env-file=.env scripts/init.js",
     "db:seed": "node --env-file=.env scripts/seed.js",
+    "db:seed-demo": "node --env-file=.env scripts/seed-demo.js",
+    "db:set-branding": "node --env-file=.env scripts/set-branding.js",
     "dev": "node --watch-path=src --env-file=.env src/server.js",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --outDir dist/client",
@@ -27,6 +29,7 @@
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "node-telegram-bot-api": "^0.67.0",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
     "pg": "^8.13.1",
     "pino": "^10.3.1",
@@ -36,6 +39,7 @@
     "vue": "^3.5.12",
     "vue-i18n": "^9.14.5",
     "vue-router": "^4.4.5",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

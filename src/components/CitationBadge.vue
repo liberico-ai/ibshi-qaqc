@@ -40,14 +40,14 @@
               class="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 font-mono leading-relaxed whitespace-pre-wrap">
               {{ citation.chunk_text }}
             </div>
-            <div v-else class="text-sm text-slate-400 italic">Không có nội dung trích dẫn.</div>
+            <div v-else class="text-sm text-slate-400 italic">{{ $t('citation.empty') }}</div>
           </div>
 
           <!-- Footer -->
           <div class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-            <span class="text-xs text-slate-400">Chunk #{{ citation.chunk_id?.slice(-8) ?? '—' }}</span>
+            <span class="text-xs text-slate-400">{{ $t('citation.chunk', { id: citation.chunk_id?.slice(-8) ?? '—' }) }}</span>
             <span class="text-xs text-slate-500">
-              Trang {{ citation.page ?? '?' }} — {{ citation.standard }}
+              {{ $t('citation.page_standard', { page: citation.page ?? '?', standard: citation.standard }) }}
             </span>
           </div>
         </div>

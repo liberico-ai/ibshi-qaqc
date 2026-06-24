@@ -1,6 +1,7 @@
 import { mirRepo } from '../repositories/MIRRepository.js';
 import { AppError } from '../../../../core/errors.js';
 import { hooks } from '../../../../core/hooks.js';
+import { SignatureService } from '../../../system/backend/services/SignatureService.js';
 
 const STAGES = ['EXPECTED', 'DOC_RECEIVED', 'PHYSICAL_INSPECTED', 'MTC_VERIFIED', 'DECIDED', 'INSTOCK'];
 
@@ -29,7 +30,7 @@ export class MIRWorkflowService {
     return mirRepo.findOne(mirId);
   }
 
-  static async decide(mirId, decision, userId, waiverNote, aiResult) {
+  static async decide(mirId, decision, userId, waiverNote, aiResult, pin = null) {
     const mir = await mirRepo.findOne(mirId);
     if (!mir) throw new AppError(404, 'MIR not found');
     if (mir.stage !== 'MTC_VERIFIED') {
@@ -38,6 +39,12 @@ export class MIRWorkflowService {
 
     const validDecisions = ['ACCEPT', 'CONDITIONAL', 'REJECT'];
     if (!validDecisions.includes(decision)) throw new AppError(400, `Invalid decision: ${decision}`);
+
+    // Gap-03: quyết định nghiệm thu MIR yêu cầu chữ ký số (PIN), ghi sổ bất biến.
+    await SignatureService.sign(userId, pin, 'mir', mirId, `decide:${decision}`, {
+      po_ref: mir.po_ref,
+      stage_before: mir.stage,
+    });
 
     await mirRepo.saveAcceptance({
       mir_id: mirId,

@@ -1,0 +1,245 @@
+import os from 'os';
+import path from 'path';
+import fs from 'fs';
+import fsp from 'fs/promises';
+import { mdrRepo } from '../repositories/MDRRepository.js';
+import { AppError } from '../../../../core/errors.js';
+import { hooks } from '../../../../core/hooks.js';
+import { createLogger } from '../../../../core/logger.js';
+
+const log = createLogger('mdr-service');
+
+export class MDRService {
+  /** Tạo dossier mới + seed 16 nhóm danh mục chuẩn từ catalog. */
+  static async createDossier(data, userId) {
+    const dossier = await mdrRepo.create({
+      project_id:     data.project_id ?? null,
+      name:           data.name,
+      status:         'draft',
+      completion_pct: 0,
+      created_by:     userId ?? null,
+    });
+
+    const catalog = await mdrRepo.getCatalog();
+    await mdrRepo.bulkInsertCategories(dossier.id, catalog);
+
+    return mdrRepo.findDetail(dossier.id);
+  }
+
+  /**
+   * Quét độ hoàn thiện: completion_pct = % nhóm bắt buộc có ít nhất 1 tài liệu 'present'.
+   * Cập nhật status: draft → in_progress → ready (khi đạt 100%).
+   */
+  static async scanCompleteness(dossierId) {
+    const detail = await mdrRepo.findDetail(dossierId);
+    if (!detail) throw new AppError(404, 'Không tìm thấy hồ sơ MDR');
+
+    const requiredCats = detail.categories.filter((c) => c.required);
+    const total = requiredCats.length || 1;
+
+    const presentByCat = new Set(
+      detail.documents.filter((d) => d.status === 'present').map((d) => d.category_id)
+    );
+    const satisfied = requiredCats.filter((c) => presentByCat.has(c.id)).length;
+    const pct = Math.round((satisfied / total) * 10000) / 100;
+
+    let status = detail.status;
+    if (detail.status !== 'submitted') {
+      if (pct >= 100) status = 'ready';
+      else if (pct > 0) status = 'in_progress';
+      else status = 'draft';
+    }
+
+    const updated = await mdrRepo.updateCompletion(dossierId, pct, status);
+    const missing = await mdrRepo.missingDocuments(dossierId);
+    return { dossier: updated, completion_pct: pct, missing };
+  }
+
+  static async listMissing(dossierId) {
+    const exists = await mdrRepo.findOne(dossierId);
+    if (!exists) throw new AppError(404, 'Không tìm thấy hồ sơ MDR');
+    return mdrRepo.missingDocuments(dossierId);
+  }
+
+  static async addDocument(dossierId, payload, userId) {
+    const dossier = await mdrRepo.findOne(dossierId);
+    if (!dossier) throw new AppError(404, 'Không tìm thấy hồ sơ MDR');
+    const doc = await mdrRepo.addDocument({ dossier_id: dossierId, ...payload });
+    await this.scanCompleteness(dossierId);
+    return doc;
+  }
+
+  static async updateDocument(dossierId, docId, fields) {
+    const doc = await mdrRepo.findDocument(docId);
+    if (!doc || doc.dossier_id !== dossierId) throw new AppError(404, 'Không tìm thấy tài liệu');
+    // auto-flip status to present if a file_link is supplied without explicit status
+    if (fields.file_link && fields.status === undefined) fields.status = 'present';
+    const updated = await mdrRepo.updateDocument(docId, fields);
+    await this.scanCompleteness(dossierId);
+    return updated;
+  }
+
+  /**
+   * Cảnh báo khi cấu kiện sắp bàn giao mà hồ sơ chưa đạt 100%.
+   * Gọi bởi cronjob hoặc thủ công.
+   */
+  static async alertNearDelivery(dossierId, userIds = []) {
+    const { dossier, completion_pct, missing } = await this.scanCompleteness(dossierId);
+    if (completion_pct >= 100) return { alerted: false, completion_pct };
+
+    await hooks.doAction('qaqc.notification.event', {
+      eventType: 'mdr.incomplete',
+      payload: {
+        title: `Hồ sơ MDR chưa đầy đủ: ${dossier.name}`,
+        message: `Hồ sơ "${dossier.name}" mới đạt ${completion_pct}%. Thiếu ${missing.length} nhóm bắt buộc trước khi bàn giao.`,
+        dossierId, completion_pct, link: `/mdr/${dossierId}`,
+      },
+      userIds: [dossier.created_by, ...userIds].filter(Boolean),
+    });
+
+    return { alerted: true, completion_pct, missing };
+  }
+
+  /**
+   * Biên dịch dossier thành 1 file PDF gộp (bìa + mục lục).
+   * Nếu file nguồn không có sẵn, sinh PDF placeholder. Trả về đường dẫn temp.
+   */
+  static async compileBundle(dossierId) {
+    const detail = await mdrRepo.findDetail(dossierId);
+    if (!detail) throw new AppError(404, 'Không tìm thấy hồ sơ MDR');
+
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // ── Cover page ──
+    const cover = pdfDoc.addPage([595, 842]); // A4
+    cover.drawText('MANUFACTURING DATA RECORD (MDR)', { x: 60, y: 760, size: 18, font: fontBold, color: rgb(0.1, 0.1, 0.4) });
+    cover.drawText('Ho so chat luong ban giao', { x: 60, y: 735, size: 12, font, color: rgb(0.3, 0.3, 0.3) });
+    cover.drawText(`Dossier: ${this._ascii(detail.name)}`, { x: 60, y: 690, size: 12, font });
+    cover.drawText(`Project: ${this._ascii(detail.project_code ?? '-')}`, { x: 60, y: 670, size: 12, font });
+    cover.drawText(`Completion: ${detail.completion_pct}%`, { x: 60, y: 650, size: 12, font });
+    cover.drawText(`Generated: ${new Date().toISOString().slice(0, 10)}`, { x: 60, y: 630, size: 12, font });
+    cover.drawText('IBS Heavy Industry — QA/QC', { x: 60, y: 60, size: 10, font, color: rgb(0.5, 0.5, 0.5) });
+
+    // ── Table of contents ──
+    const toc = pdfDoc.addPage([595, 842]);
+    toc.drawText('TABLE OF CONTENTS', { x: 60, y: 780, size: 16, font: fontBold });
+    let y = 745;
+    for (const cat of detail.categories) {
+      const docsInCat = detail.documents.filter((d) => d.category_id === cat.id);
+      const present = docsInCat.filter((d) => d.status === 'present').length;
+      const mark = cat.required ? (present > 0 ? '[OK]' : '[MISSING]') : '[OPT]';
+      toc.drawText(
+        `${String(cat.order_no).padStart(2, '0')}. ${this._ascii(cat.name_vi)}  ${mark}  (${present}/${docsInCat.length})`,
+        { x: 60, y, size: 11, font }
+      );
+      y -= 22;
+      if (y < 60) { y = 780; pdfDoc.addPage([595, 842]); }
+    }
+
+    const bytes = await pdfDoc.save();
+    const outPath = path.join(os.tmpdir(), `mdr_bundle_${dossierId}_${Date.now()}.pdf`);
+    await fsp.writeFile(outPath, bytes);
+    log.info({ dossierId, outPath }, 'MDR bundle compiled');
+    return { path: outPath, pages: pdfDoc.getPageCount(), note: 'PDF gồm bìa + mục lục (placeholder cho file nguồn chưa có)' };
+  }
+
+  /**
+   * Đóng gói dossier thành .zip nộp khách hàng.
+   * Gồm PDF bundle + manifest. File nguồn không có sẽ được liệt kê placeholder.
+   */
+  static async buildSubmission(dossierId, client) {
+    const detail = await mdrRepo.findDetail(dossierId);
+    if (!detail) throw new AppError(404, 'Không tìm thấy hồ sơ MDR');
+
+    const { default: archiver } = await import('archiver');
+    const bundle = await this.compileBundle(dossierId);
+
+    const outPath = path.join(os.tmpdir(), `mdr_submission_${dossierId}_${Date.now()}.zip`);
+    const output = fs.createWriteStream(outPath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    const done = new Promise((resolve, reject) => {
+      output.on('close', resolve);
+      archive.on('error', reject);
+    });
+    archive.pipe(output);
+
+    // PDF bundle
+    archive.file(bundle.path, { name: '00_MDR_Bundle.pdf' });
+
+    // Manifest
+    const manifest = {
+      dossier: detail.name,
+      project: detail.project_code ?? null,
+      client: client ?? null,
+      completion_pct: detail.completion_pct,
+      generated_at: new Date().toISOString(),
+      categories: detail.categories.map((c) => ({
+        code: c.code,
+        name_vi: c.name_vi,
+        required: c.required,
+        documents: detail.documents
+          .filter((d) => d.category_id === c.id)
+          .map((d) => ({ doc_name: d.doc_name, status: d.status, file_link: d.file_link, source_module: d.source_module })),
+      })),
+    };
+    archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
+
+    // Document placeholders / available source links
+    for (const doc of detail.documents) {
+      const cat = detail.categories.find((c) => c.id === doc.category_id);
+      const folder = cat ? `${String(cat.order_no).padStart(2, '0')}_${cat.code}` : 'misc';
+      if (doc.status === 'present' && doc.file_link) {
+        archive.append(`Tai lieu: ${doc.doc_name}\nNguon: ${doc.file_link}\nModule: ${doc.source_module ?? '-'}\n`,
+          { name: `${folder}/${this._safe(doc.doc_name)}.txt` });
+      } else {
+        archive.append(`THIEU TAI LIEU (placeholder): ${doc.doc_name}\nTrang thai: ${doc.status}\n`,
+          { name: `${folder}/_MISSING_${this._safe(doc.doc_name)}.txt` });
+      }
+    }
+
+    await archive.finalize();
+    await done;
+
+    // record a transmittal alongside the submission
+    const transNo = await mdrRepo.nextTransmittalNo(dossierId);
+    await mdrRepo.addTransmittal({
+      dossier_id: dossierId, transmittal_no: transNo, client,
+      purpose: 'Nộp hồ sơ MDR', doc_count: detail.documents.length,
+      remarks: `Hoàn thiện ${detail.completion_pct}%`,
+    });
+
+    log.info({ dossierId, outPath }, 'MDR submission built');
+    return { path: outPath, transmittal_no: transNo, doc_count: detail.documents.length };
+  }
+
+  static async createTransmittal(dossierId, payload, userId) {
+    const detail = await mdrRepo.findDetail(dossierId);
+    if (!detail) throw new AppError(404, 'Không tìm thấy hồ sơ MDR');
+    const transNo = await mdrRepo.nextTransmittalNo(dossierId);
+    return mdrRepo.addTransmittal({
+      dossier_id: dossierId,
+      transmittal_no: transNo,
+      client: payload.client,
+      purpose: payload.purpose ?? null,
+      doc_count: detail.documents.filter((d) => d.status === 'present').length,
+      remarks: payload.remarks ?? null,
+      issued_by: userId ?? null,
+    });
+  }
+
+  static _ascii(s) {
+    return String(s ?? '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D');
+  }
+
+  static _safe(s) {
+    return this._ascii(s).replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 80);
+  }
+}

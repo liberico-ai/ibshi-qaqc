@@ -1,11 +1,11 @@
 <template>
   <div class="system-settings-general-view">
-    <p class="text-gray-500 dark:text-gray-400 text-sm mb-4">Cấu hình các thông số chung áp dụng cho toàn bộ nền tảng. Khi lưu cài đặt, hệ thống sẽ tự động tải lại trang để áp dụng.</p>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mb-4">{{ $t('settings.general_subtitle') }}</p>
 
     <!-- Error/Loading states -->
     <div v-if="loading" class="text-center py-10">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-      <p class="mt-4 text-sm text-gray-500">Đang tải cấu hình...</p>
+      <p class="mt-4 text-sm text-gray-500">{{ $t('settings.loading') }}</p>
     </div>
 
     <div v-else-if="error" class="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100 flex items-center">
@@ -20,36 +20,36 @@
         <div class="p-6 space-y-6">
           <!-- System Name -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Tên hệ thống hiển thị</label>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{{ $t('settings.system_name') }}</label>
             <input 
               v-model="form.system_name" 
               type="text" 
               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none dark:bg-black/20 dark:border-[#252540] dark:text-white transition-all"
-              placeholder="VD: Libe Move Logistics"
+              :placeholder="$t('settings.system_name_placeholder')"
               required
             >
-            <p class="text-xs text-gray-400 mt-2">Dùng cho tiêu đề trình duyệt (browser title) và hiển thị góc trên bên trái menu.</p>
+            <p class="text-xs text-gray-400 mt-2">{{ $t('settings.system_name_hint') }}</p>
           </div>
 
           <!-- Default Theme -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Giao diện (Theme) mặc định</label>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{{ $t('settings.default_theme') }}</label>
             <div class="flex items-center gap-6">
               <label class="flex items-center gap-2.5 cursor-pointer group">
                 <input type="radio" v-model="form.default_theme" value="light" class="w-4 h-4 text-blue-600 focus:ring-blue-500/50 border-gray-300 dark:bg-black/20 dark:border-gray-600">
-                <span class="text-[14px] text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Giao diện sáng (Light Mode)</span>
+                <span class="text-[14px] text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ $t('settings.light_mode') }}</span>
               </label>
               <label class="flex items-center gap-2.5 cursor-pointer group">
                 <input type="radio" v-model="form.default_theme" value="dark" class="w-4 h-4 text-blue-600 focus:ring-blue-500/50 border-gray-300 dark:bg-black/20 dark:border-gray-600">
-                <span class="text-[14px] text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Giao diện tối (Dark Mode)</span>
+                <span class="text-[14px] text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ $t('settings.dark_mode') }}</span>
               </label>
             </div>
-            <p class="text-xs text-gray-400 mt-2">Được áp dụng khi người dùng mở trang lần đầu hoặc chưa lưu sở thích theme.</p>
+            <p class="text-xs text-gray-400 mt-2">{{ $t('settings.theme_hint') }}</p>
           </div>
 
           <!-- Log Level -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Mức độ ghi log (Log Level)</label>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{{ $t('settings.log_level') }}</label>
             <div class="relative">
               <select
                 v-model="form.log_level"
@@ -67,26 +67,26 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
             </div>
-            <p class="text-xs text-gray-400 mt-2">Áp dụng ngay lập tức, không cần khởi động lại server.</p>
+            <p class="text-xs text-gray-400 mt-2">{{ $t('settings.log_level_hint') }}</p>
           </div>
 
           <!-- Logo -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Đường dẫn Logo (URL)</label>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{{ $t('settings.logo_url') }}</label>
             <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
               <div class="flex-1">
                 <input 
                   v-model="form.logo_url" 
                   type="text" 
                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none dark:bg-black/20 dark:border-[#252540] dark:text-white transition-all"
-                  placeholder="VD: /favicon.ico hoặc https://..."
+                  :placeholder="$t('settings.logo_url_placeholder')"
                 >
-                <p class="text-xs text-gray-400 mt-2">Dùng URL tương đối (static folder) hoặc URL tuyệt đối.</p>
+                <p class="text-xs text-gray-400 mt-2">{{ $t('settings.logo_url_hint') }}</p>
               </div>
               
               <div class="w-20 h-20 shrink-0 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-[#252540] rounded-xl flex items-center justify-center p-2 mt-4 sm:mt-0 shadow-inner">
                 <img v-if="form.logo_url" :src="form.logo_url" alt="Logo Preview" class="max-w-full max-h-full object-contain" @error="handleImageError">
-                <span v-else class="text-[10px] text-gray-400 text-center uppercase tracking-wider font-semibold">No Logo</span>
+                <span v-else class="text-[10px] text-gray-400 text-center uppercase tracking-wider font-semibold">{{ $t('settings.no_logo') }}</span>
               </div>
             </div>
           </div>
@@ -101,8 +101,8 @@
           >
             <svg v-if="saving" class="w-4 h-4 animate-spin text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-            <span v-if="saving">Đang lưu...</span>
-            <span v-else>Lưu cấu hình</span>
+            <span v-if="saving">{{ $t('settings.saving') }}</span>
+            <span v-else>{{ $t('settings.save_config') }}</span>
           </button>
         </div>
 
@@ -113,9 +113,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useToast } from '@/composables/useToast.js';
 import { apiFetch } from '@/utils/api.js';
 
+const { t } = useI18n();
 const { success, error: showError } = useToast();
 
 const loading = ref(true);
@@ -142,10 +144,10 @@ const loadSettings = async () => {
       if (dbSettings.logo_url !== undefined) form.value.logo_url = dbSettings.logo_url;
       if (dbSettings.log_level !== undefined) form.value.log_level = dbSettings.log_level;
     } else {
-      error.value = 'Không thể kết nối đến máy chủ cài đặt';
+      error.value = t('settings.load_failed');
     }
   } catch (err) {
-    error.value = err.message || 'Lỗi mạng khi tải cài đặt';
+    error.value = err.message || t('settings.network_error');
   } finally {
     loading.value = false;
   }
@@ -167,17 +169,17 @@ const saveSettings = async () => {
     });
     
     if (res.ok) {
-      success('Lưu cài đặt thành công. Trang sẽ tự tải lại...');
+      success(t('settings.save_success'));
       localStorage.removeItem('theme'); // Xóa theme cũ trong bộ nhớ để áp dụng theme hệ thống mới
       setTimeout(() => {
         window.location.reload();
       }, 1000);
     } else {
       const data = await res.json();
-      showError(data.error || data.message || 'Có lỗi xảy ra khi lưu.');
+      showError(data.error || data.message || t('settings.save_failed'));
     }
   } catch (err) {
-    showError(err.message || 'Lỗi mạng khi lưu cài đặt.');
+    showError(err.message || t('settings.network_error'));
   } finally {
     saving.value = false;
   }

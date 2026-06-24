@@ -7,7 +7,7 @@
 
     <div v-if="loading" class="text-center py-10">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-      <p class="mt-4 text-sm text-gray-500">Đang tải cấu hình...</p>
+      <p class="mt-4 text-sm text-gray-500">{{ $t('settings.loading') }}</p>
     </div>
 
     <div v-else class="bg-white dark:bg-[#1a1a2e] rounded-xl shadow-sm border border-gray-100 dark:border-[#252540] overflow-hidden">
@@ -17,10 +17,8 @@
           <!-- Toggle bật/tắt -->
           <div class="flex items-center justify-between">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Bật ghi log thao tác</label>
-              <p class="text-xs text-gray-400 mt-1">
-                Khi bật, mọi insert/update/delete qua Repository đều được ghi vào bảng <code class="font-mono">sys_logs</code>.
-              </p>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">{{ $t('settings.logs_enable') }}</label>
+              <p class="text-xs text-gray-400 mt-1">{{ $t('settings.logs_enable_hint') }}</p>
             </div>
             <button type="button" @click="form.sys_log_enabled = !form.sys_log_enabled"
               class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -34,7 +32,7 @@
           <!-- Thời gian lưu -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-              Thời gian lưu log (ngày)
+              {{ $t('settings.logs_retention') }}
             </label>
             <div class="flex items-center gap-3">
               <input
@@ -44,12 +42,9 @@
                 max="3650"
                 class="w-40 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none dark:bg-black/20 dark:border-[#252540] dark:text-white transition-all"
               >
-              <span class="text-sm text-gray-500 dark:text-gray-400">ngày</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">{{ $t('settings.logs_days') }}</span>
             </div>
-            <p class="text-xs text-gray-400 mt-2">
-              Log cũ hơn số ngày này sẽ tự động xóa lúc 3:00 AM mỗi ngày.
-              Nhập <strong>0</strong> để giữ log vĩnh viễn (không tự xóa).
-            </p>
+            <p class="text-xs text-gray-400 mt-2">{{ $t('settings.logs_retention_hint') }}</p>
           </div>
 
         </div>
@@ -63,7 +58,7 @@
             <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
             </svg>
-            <span>{{ saving ? 'Đang lưu...' : 'Lưu cấu hình' }}</span>
+            <span>{{ saving ? $t('settings.saving') : $t('settings.save_config') }}</span>
           </button>
         </div>
       </form>
@@ -73,9 +68,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { apiFetch } from '@/utils/api.js';
 import { useToast } from '@/composables/useToast.js';
 
+const { t } = useI18n();
 const { success, error: showError } = useToast();
 
 const loading = ref(true);
@@ -95,7 +92,7 @@ const load = async () => {
       form.value.sys_log_retention_days = parseInt(s.sys_log_retention_days, 10) || 90;
     }
   } catch (err) {
-    showError('Không thể tải cấu hình log.');
+    showError(t('settings.logs_load_failed'));
   } finally {
     loading.value = false;
   }
@@ -114,13 +111,13 @@ const save = async () => {
       body: JSON.stringify(body),
     });
     if (res.ok) {
-      success('Lưu cấu hình log thành công.');
+      success(t('settings.logs_save_success'));
     } else {
       const d = await res.json();
-      showError(d.error || 'Có lỗi xảy ra.');
+      showError(d.error || t('settings.error_occurred'));
     }
   } catch (err) {
-    showError(err.message || 'Lỗi mạng.');
+    showError(err.message || t('settings.network_error'));
   } finally {
     saving.value = false;
   }

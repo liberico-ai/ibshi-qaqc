@@ -59,8 +59,8 @@ export class MIRController {
   }
 
   static async decide(req, res) {
-    const { decision, waiver_note, ai_result } = req.validated ?? req.body;
-    const record = await MIRWorkflowService.decide(req.params.id, decision, req.user?.id, waiver_note, ai_result);
+    const { decision, waiver_note, ai_result, pin } = req.validated ?? req.body;
+    const record = await MIRWorkflowService.decide(req.params.id, decision, req.user?.id, waiver_note, ai_result, pin);
     res.json({ data: record });
   }
 

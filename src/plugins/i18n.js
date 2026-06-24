@@ -15,6 +15,7 @@ function detectLocale() {
 
 export const i18n = createI18n({
   legacy: false,
+  globalInjection: true, // cho phép dùng $t(...) trực tiếp trong template (không cần useI18n)
   locale: detectLocale(),
   fallbackLocale: FALLBACK,
   messages: { vi, en },

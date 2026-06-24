@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
     <div class="flex items-center gap-3">
-      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Tra Cứu Tiêu Chuẩn</h2>
+      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">{{ $t('qaqcMore.lookup_title') }}</h2>
     </div>
 
     <!-- Tabs -->
@@ -21,26 +21,26 @@
     <div v-if="activeTab === 'lookup'" class="space-y-4">
       <div class="card p-4 flex flex-wrap items-end gap-3">
         <div class="flex flex-col gap-1 min-w-[200px]">
-          <label class="text-xs text-slate-500">Tiêu Chuẩn</label>
+          <label class="text-xs text-slate-500">{{ $t('qaqcMore.standard_label') }}</label>
           <select
             v-model="lookup.selectedStandard"
             @change="onLookupStandardChange"
             class="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none"
           >
-            <option value="">-- Chọn tiêu chuẩn --</option>
+            <option value="">{{ $t('qaqcMore.select_standard') }}</option>
             <option v-for="std in standards" :key="std.standard_code" :value="std.standard_code">
               {{ std.standard_code }}
             </option>
           </select>
         </div>
         <div class="flex flex-col gap-1 min-w-[160px]">
-          <label class="text-xs text-slate-500">Grade</label>
+          <label class="text-xs text-slate-500">{{ $t('qaqcMore.grade_label') }}</label>
           <select
             v-model="lookup.selectedGrade"
             class="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none"
             :disabled="!lookup.selectedStandard"
           >
-            <option value="">-- Chọn grade --</option>
+            <option value="">{{ $t('qaqcMore.select_grade') }}</option>
             <option v-for="g in lookupGrades" :key="g" :value="g">{{ g }}</option>
           </select>
         </div>
@@ -48,10 +48,10 @@
           @click="doLookup"
           :disabled="!lookup.selectedStandard || !lookup.selectedGrade || lookup.loading"
           class="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
-        >Tra Cứu</button>
+        >{{ $t('qaqcMore.do_lookup') }}</button>
       </div>
 
-      <div v-if="lookup.loading" class="card p-8 text-center text-slate-500">Đang tải...</div>
+      <div v-if="lookup.loading" class="card p-8 text-center text-slate-500">{{ $t('common.loading') }}</div>
 
       <template v-else-if="lookup.result">
         <div class="text-sm font-semibold text-slate-700 dark:text-slate-300 px-1">
@@ -60,12 +60,12 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <!-- Chemistry -->
           <div class="card p-4 space-y-2">
-            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Thành Phần Hóa Học</h3>
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $t('qaqcMore.chemistry_title') }}</h3>
             <table class="w-full text-xs">
               <thead>
                 <tr class="text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                  <th class="text-left py-1 pr-3">Nguyên tố</th>
-                  <th class="text-left py-1">Giới hạn</th>
+                  <th class="text-left py-1 pr-3">{{ $t('qaqcMore.col_element_short') }}</th>
+                  <th class="text-left py-1">{{ $t('qaqcMore.col_limit') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -78,12 +78,12 @@
           </div>
           <!-- Mechanical -->
           <div class="card p-4 space-y-2">
-            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Tính Chất Cơ Học</h3>
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $t('qaqcMore.mechanical_title') }}</h3>
             <table class="w-full text-xs">
               <thead>
                 <tr class="text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                  <th class="text-left py-1 pr-3">Thuộc tính</th>
-                  <th class="text-left py-1">Giá trị</th>
+                  <th class="text-left py-1 pr-3">{{ $t('qaqcMore.col_attribute') }}</th>
+                  <th class="text-left py-1">{{ $t('qaqcMore.col_value') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -104,26 +104,26 @@
         <div v-for="(sel, idx) in compare.selections" :key="idx" class="flex flex-wrap items-end gap-3">
           <span class="text-xs text-slate-500 w-4">{{ idx + 1 }}</span>
           <div class="flex flex-col gap-1 min-w-[200px]">
-            <label class="text-xs text-slate-500">Tiêu Chuẩn</label>
+            <label class="text-xs text-slate-500">{{ $t('qaqcMore.standard_label') }}</label>
             <select
               v-model="sel.standardCode"
               @change="onCompareStandardChange(idx)"
               class="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none"
             >
-              <option value="">-- Chọn tiêu chuẩn --</option>
+              <option value="">{{ $t('qaqcMore.select_standard') }}</option>
               <option v-for="std in standards" :key="std.standard_code" :value="std.standard_code">
                 {{ std.standard_code }}
               </option>
             </select>
           </div>
           <div class="flex flex-col gap-1 min-w-[160px]">
-            <label class="text-xs text-slate-500">Grade</label>
+            <label class="text-xs text-slate-500">{{ $t('qaqcMore.grade_label') }}</label>
             <select
               v-model="sel.grade"
               class="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none"
               :disabled="!sel.standardCode"
             >
-              <option value="">-- Chọn grade --</option>
+              <option value="">{{ $t('qaqcMore.select_grade') }}</option>
               <option v-for="g in compareGrades[idx]" :key="g" :value="g">{{ g }}</option>
             </select>
           </div>
@@ -132,10 +132,10 @@
           @click="doCompare"
           :disabled="compare.loading || compare.selections.filter(s => s.standardCode && s.grade).length < 2"
           class="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg transition-colors"
-        >So Sánh</button>
+        >{{ $t('qaqcMore.do_compare') }}</button>
       </div>
 
-      <div v-if="compare.loading" class="card p-8 text-center text-slate-500">Đang tải...</div>
+      <div v-if="compare.loading" class="card p-8 text-center text-slate-500">{{ $t('common.loading') }}</div>
 
       <div v-else-if="compare.results.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-for="item in compare.results" :key="`${item.standard_code}-${item.grade}`" class="card p-4 space-y-3">
@@ -144,14 +144,14 @@
             <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Grade {{ item.grade }}</div>
           </div>
           <div>
-            <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Hóa Học</div>
+            <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{{ $t('qaqcMore.chemistry_short') }}</div>
             <div v-for="(val, key) in item.chemistry" :key="key" class="flex justify-between text-xs py-0.5 border-b border-slate-100 dark:border-slate-800">
               <span class="text-slate-600 dark:text-slate-400">{{ key }}</span>
               <span class="font-medium text-slate-700 dark:text-slate-300">{{ val }}</span>
             </div>
           </div>
           <div>
-            <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Cơ Học</div>
+            <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{{ $t('qaqcMore.mechanical_short') }}</div>
             <div v-for="(val, key) in item.mechanical" :key="key" class="flex justify-between text-xs py-0.5 border-b border-slate-100 dark:border-slate-800">
               <span class="text-slate-600 dark:text-slate-400">{{ key }}</span>
               <span class="font-medium text-slate-700 dark:text-slate-300">{{ val }}</span>
@@ -168,11 +168,11 @@
           v-model="ai.query"
           @keydown.ctrl.enter="doAiSearch"
           rows="3"
-          placeholder="Nhập câu hỏi kỹ thuật... (Ctrl+Enter để gửi)"
+          :placeholder="$t('standards.ai_query_placeholder')"
           class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none resize-none"
         ></textarea>
         <div class="flex items-center justify-between">
-          <span class="text-xs text-slate-400">Tìm kiếm ngữ nghĩa trong thư viện tiêu chuẩn đã import</span>
+          <span class="text-xs text-slate-400">{{ $t('qaqcMore.ai_semantic_hint') }}</span>
           <button @click="doAiSearch" :disabled="!ai.query.trim() || ai.loading"
             class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
             <svg v-if="ai.loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -182,7 +182,7 @@
             <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
             </svg>
-            {{ ai.loading ? 'Đang tìm...' : 'Hỏi AI' }}
+            {{ ai.loading ? $t('qaqcMore.ai_searching') : $t('standards.ai_search_btn') }}
           </button>
         </div>
       </div>
@@ -193,7 +193,7 @@
         <div class="flex flex-wrap items-center gap-3">
           <ConfidenceIndicator :confidence="ai.result.confidence ?? 0" />
           <span v-if="ai.result.source" class="text-xs text-slate-400">
-            {{ ai.result.source === 'gemini-vector' ? 'AI (vector search)' : 'Tìm kiếm cơ bản' }}
+            {{ ai.result.source === 'gemini-vector' ? 'AI (vector search)' : $t('qaqcMore.ai_basic_search') }}
           </span>
         </div>
 
@@ -204,7 +204,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
           </svg>
           <div>
-            <div class="font-medium mb-0.5">Không tìm thấy trong thư viện tiêu chuẩn</div>
+            <div class="font-medium mb-0.5">{{ $t('standards.not_found_title') }}</div>
             <div v-for="(r, i) in ai.result.not_found_reasons" :key="i" class="text-xs">{{ r }}</div>
           </div>
         </div>
@@ -212,7 +212,7 @@
         <!-- Low confidence disclaimer -->
         <div v-else-if="ai.result.confidence < 0.6"
           class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
-          Kết quả có độ tin cậy thấp — vui lòng tra thêm trong tài liệu gốc.
+          {{ $t('standards.confidence_low') }}
         </div>
 
         <!-- Summary -->
@@ -222,7 +222,7 @@
 
         <!-- Citations -->
         <div v-if="ai.result.citations?.length" class="space-y-2">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Trích dẫn</div>
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ $t('standards.citations') }}</div>
           <div class="flex flex-wrap gap-2">
             <CitationBadge v-for="(c, i) in ai.result.citations" :key="i" :citation="c" />
           </div>
@@ -230,18 +230,18 @@
 
         <!-- Feedback -->
         <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center gap-3">
-          <span class="text-xs text-slate-400">Kết quả có chính xác không?</span>
+          <span class="text-xs text-slate-400">{{ $t('standards.feedback_prompt') }}</span>
           <button @click="openFeedback('WRONG_ANSWER')"
             class="text-xs px-2 py-1 rounded border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
-            Sai nội dung
+            {{ $t('qaqcMore.feedback_wrong_answer') }}
           </button>
           <button @click="openFeedback('MISSING_CITATION')"
             class="text-xs px-2 py-1 rounded border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30">
-            Thiếu trích dẫn
+            {{ $t('qaqcMore.feedback_missing_citation') }}
           </button>
           <button @click="openFeedback('WRONG_PAGE')"
             class="text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800">
-            Sai trang
+            {{ $t('qaqcMore.feedback_wrong_page') }}
           </button>
         </div>
       </div>
@@ -251,27 +251,27 @@
         <div v-if="feedback.show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div class="absolute inset-0 bg-black/50" @click="feedback.show = false"></div>
           <div class="relative z-10 w-full max-w-md bg-white dark:bg-[#1a1a2e] rounded-xl shadow-2xl p-5 space-y-4">
-            <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">Báo Sai</h3>
+            <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ $t('standards.feedback_title') }}</h3>
             <div>
-              <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Loại lỗi</label>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{{ $t('qaqcMore.feedback_error_type') }}</label>
               <select v-model="feedback.type" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none">
-                <option value="WRONG_ANSWER">Sai nội dung</option>
-                <option value="MISSING_CITATION">Thiếu trích dẫn</option>
-                <option value="WRONG_PAGE">Sai trang / section</option>
-                <option value="OTHER">Khác</option>
+                <option value="WRONG_ANSWER">{{ $t('qaqcMore.feedback_wrong_answer') }}</option>
+                <option value="MISSING_CITATION">{{ $t('qaqcMore.feedback_missing_citation') }}</option>
+                <option value="WRONG_PAGE">{{ $t('qaqcMore.feedback_wrong_page_section') }}</option>
+                <option value="OTHER">{{ $t('qaqcMore.feedback_other') }}</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Mô tả (tùy chọn)</label>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{{ $t('qaqcMore.feedback_description') }}</label>
               <textarea v-model="feedback.reason" rows="3"
                 class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none resize-none"
-                placeholder="Mô tả chi tiết lỗi..."></textarea>
+                :placeholder="$t('qaqcMore.feedback_description_placeholder')"></textarea>
             </div>
             <div class="flex justify-end gap-2">
-              <button @click="feedback.show = false" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800">Hủy</button>
+              <button @click="feedback.show = false" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800">{{ $t('common.cancel') }}</button>
               <button @click="submitFeedback" :disabled="feedback.submitting"
                 class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm rounded-lg">
-                {{ feedback.submitting ? 'Đang gửi...' : 'Gửi báo cáo' }}
+                {{ feedback.submitting ? $t('qaqcMore.feedback_submitting') : $t('qaqcMore.feedback_submit') }}
               </button>
             </div>
           </div>
@@ -285,20 +285,20 @@
         <input
           v-model="equivSearch"
           @input="onEquivSearch"
-          placeholder="Tìm kiếm grade..."
+          :placeholder="$t('qaqcMore.equiv_search_placeholder')"
           class="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none"
         />
       </div>
 
-      <div v-if="equiv.loading" class="card p-8 text-center text-slate-500">Đang tải...</div>
+      <div v-if="equiv.loading" class="card p-8 text-center text-slate-500">{{ $t('common.loading') }}</div>
 
       <div v-else-if="equiv.data.length" class="card overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="text-xs text-slate-500 border-b border-slate-200 dark:border-slate-700">
-              <th class="text-left py-2 px-4 font-medium">Grade</th>
-              <th class="text-left py-2 px-4 font-medium">Các Grade Tương Đương</th>
-              <th class="text-left py-2 px-4 font-medium">Ghi Chú</th>
+              <th class="text-left py-2 px-4 font-medium">{{ $t('qaqcMore.grade_label') }}</th>
+              <th class="text-left py-2 px-4 font-medium">{{ $t('qaqcMore.equiv_col_equivalents') }}</th>
+              <th class="text-left py-2 px-4 font-medium">{{ $t('qaqcMore.equiv_col_note') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -319,7 +319,7 @@
         </table>
       </div>
 
-      <div v-else class="card p-8 text-center text-slate-400 text-sm">Không tìm thấy kết quả.</div>
+      <div v-else class="card p-8 text-center text-slate-400 text-sm">{{ $t('qaqcMore.equiv_empty') }}</div>
     </div>
   </div>
 </template>
@@ -329,13 +329,16 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { apiFetch } from '@/utils/api.js';
 import CitationBadge from '@/components/CitationBadge.vue';
 import ConfidenceIndicator from '@/components/ConfidenceIndicator.vue';
+import { useI18n } from 'vue-i18n';
 
-const tabs = [
-  { key: 'lookup', label: 'Tra Cứu' },
-  { key: 'compare', label: 'So Sánh' },
-  { key: 'equivalents', label: 'Tương Đương' },
-  { key: 'ai', label: 'AI Hỏi Đáp' },
-];
+const { t } = useI18n();
+
+const tabs = computed(() => [
+  { key: 'lookup', label: t('qaqcMore.tab_lookup') },
+  { key: 'compare', label: t('qaqcMore.tab_compare') },
+  { key: 'equivalents', label: t('qaqcMore.tab_equivalents') },
+  { key: 'ai', label: t('qaqcMore.tab_ai') },
+]);
 const activeTab = ref('lookup');
 
 // ── Standards list ──────────────────────────────────────────────

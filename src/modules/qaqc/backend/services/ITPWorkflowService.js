@@ -1,6 +1,10 @@
 import { itpRepo } from '../repositories/ITPRepository.js';
 import { AppError } from '../../../../core/errors.js';
 import { hooks } from '../../../../core/hooks.js';
+import { SignatureService } from '../../../system/backend/services/SignatureService.js';
+
+// Các trạng thái phê duyệt cần chữ ký số (PIN).
+const SIGN_REQUIRED_STATUSES = new Set(['MANAGER_APPROVED', 'DIRECTOR_APPROVED']);
 
 const EVENT_BY_STATUS = {
   UNDER_REVIEW:      'ITP_SUBMITTED',
@@ -20,13 +24,21 @@ const TRANSITIONS = {
 };
 
 export class ITPWorkflowService {
-  static async transition(planId, targetStatus, userId) {
+  static async transition(planId, targetStatus, userId, pin = null) {
     const plan = await itpRepo.findOne(planId);
     if (!plan) throw new AppError(404, 'ITP not found');
 
     const allowed = TRANSITIONS[plan.status] ?? [];
     if (!allowed.includes(targetStatus)) {
       throw new AppError(400, `Cannot transition from ${plan.status} to ${targetStatus}`);
+    }
+
+    // Gap-03: phê duyệt ITP yêu cầu chữ ký số (PIN) và ghi sổ chữ ký bất biến.
+    if (SIGN_REQUIRED_STATUSES.has(targetStatus)) {
+      await SignatureService.sign(userId, pin, 'itp', planId, `approve:${targetStatus}`, {
+        version: plan.version,
+        status_before: plan.status,
+      });
     }
 
     const snapshot = await itpRepo.findWithItems(planId);

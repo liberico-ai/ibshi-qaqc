@@ -11,6 +11,7 @@ import { SysLogsController } from './controllers/SysLogsController.js';
 import { ProvidersController } from './controllers/ProvidersController.js';
 import { NotificationPrefsController } from './controllers/NotificationPrefsController.js';
 import { UserPreferencesController } from './controllers/UserPreferencesController.js';
+import { SignatureController } from './controllers/SignatureController.js';
 import { requireAction } from '../../../core/permission.js';
 import { asyncHandler } from '../../../core/errors.js';
 import { validate, required, isString, isArray, minLength } from '../../../core/validate.js';
@@ -71,6 +72,18 @@ export function registerSystemRoutes(app) {
 
   // System Info
   app.get('/api/system/info', asyncHandler(SystemInfoController.getInfo));
+
+  // Digital signature (Gap-03) — PIN ký số & lịch sử chữ ký
+  app.get( '/api/system/signature/status',  requireAction(null), asyncHandler(SignatureController.status));
+  app.post('/api/system/signature/set-pin', requireAction(null),
+    validate({ pin: [required, isString] }),
+    asyncHandler(SignatureController.setPin)
+  );
+  app.post('/api/system/signature/verify',  requireAction(null),
+    validate({ pin: [required, isString] }),
+    asyncHandler(SignatureController.verify)
+  );
+  app.get( '/api/system/signature/:entityType/:entityId', requireAction(null), asyncHandler(SignatureController.listForEntity));
 
   // Cronjobs
   app.get('/api/system/cronjobs', requireAction('settings.read'), asyncHandler(CronjobController.getCronjobs));
