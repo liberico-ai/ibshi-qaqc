@@ -27,6 +27,14 @@ export class CalibrationController {
     res.json({ data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   }
 
+  // Danh sách thiết bị còn hiệu lực hiệu chuẩn (cho bộ chọn thiết bị phiếu KT)
+  static async getAvailableDevices(req, res) {
+    const filter = {};
+    if (req.query.search) filter.search = req.query.search;
+    const data = await calDeviceRepo.findAvailable(filter);
+    res.json({ data });
+  }
+
   static async getDevice(req, res) {
     const record = await calDeviceRepo.findDetail(req.params.id);
     if (!record) throw new AppError(404, 'Không tìm thấy thiết bị');

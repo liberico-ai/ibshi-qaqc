@@ -10,6 +10,7 @@ export class NCRController {
     if (req.query.status)    filter.status     = req.query.status;
     if (req.query.projectId) filter.project_id = req.query.projectId;
     if (req.query.severity)  filter.severity   = req.query.severity;
+    if (req.query.slaStatus) filter.sla_status = req.query.slaStatus;
     const { data, meta } = await ncrRepo.findAndCountList(filter, { limit, offset });
     res.json({ data, pagination: { page, limit, total: meta.total, totalPages: meta.totalPages } });
   }

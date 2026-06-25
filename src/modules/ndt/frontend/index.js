@@ -3,6 +3,7 @@ import NDTBaseView          from './NDTBaseView.vue';
 import NDTRequestListView   from './NDTRequestListView.vue';
 import NDTRequestFormView   from './NDTRequestFormView.vue';
 import NDTVendorListView    from './NDTVendorListView.vue';
+import NDTVendorSubmitView  from './NDTVendorSubmitView.vue';
 
 // ── Decentralized i18n: merge module messages, never touch src/locales ──
 i18n.global.mergeLocaleMessage('vi', {
@@ -35,6 +36,8 @@ export default function registerNDTFrontend(app, router) {
       { path: 'requests',     name: 'NDTRequests',    component: NDTRequestListView },
       { path: 'requests/new', name: 'NDTRequestForm', component: NDTRequestFormView },
       { path: 'vendors',      name: 'NDTVendors',     component: NDTVendorListView },
+      // Trang nhà thầu nộp kết quả bằng token (xác thực qua API token, không cần quyền nội bộ).
+      { path: 'vendor/submit', name: 'NDTVendorSubmit', component: NDTVendorSubmitView, meta: { public: true } },
     ],
   });
 }

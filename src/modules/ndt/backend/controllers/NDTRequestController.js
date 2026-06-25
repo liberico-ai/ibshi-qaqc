@@ -1,6 +1,7 @@
 import { paginate } from '../../../../core/db.js';
 import { ndtRequestRepo } from '../repositories/NDTRepository.js';
 import { NDTRequestService } from '../services/NDTRequestService.js';
+import { NDTVendorTokenService } from '../services/NDTVendorTokenService.js';
 import { AppError } from '../../../../core/errors.js';
 
 export class NDTRequestController {
@@ -37,5 +38,33 @@ export class NDTRequestController {
     const body = req.validated ?? req.body;
     const record = await NDTRequestService.uploadResult(req.params.id, body, req.user?.id);
     res.status(201).json({ data: record });
+  }
+
+  // ── Token nhà thầu ─────────────────────────────────────────────
+  /** (Có đăng nhập) Sinh token phạm vi cho 1 yêu cầu NDT. */
+  static async generateToken(req, res) {
+    const tk = await NDTVendorTokenService.generate(req.params.id, req.body?.vendor_id ?? null);
+    res.status(201).json({ data: tk });
+  }
+
+  /** (Công khai) Nhà thầu kiểm tra token hợp lệ → trả thông tin yêu cầu tối thiểu. */
+  static async vendorVerifyToken(req, res) {
+    const row = await NDTVendorTokenService.verify(req.query.token);
+    res.json({
+      data: {
+        request_no: row.request_no,
+        method: row.method,
+        request_status: row.request_status,
+        expires_at: row.expires_at,
+      },
+    });
+  }
+
+  /** (Công khai) Nhà thầu nộp kết quả NDT bằng token. */
+  static async vendorSubmitResult(req, res) {
+    const body = req.validated ?? req.body;
+    const { token, ...data } = body;
+    const result = await NDTVendorTokenService.submitResultWithToken(token, data);
+    res.status(201).json({ data: result });
   }
 }

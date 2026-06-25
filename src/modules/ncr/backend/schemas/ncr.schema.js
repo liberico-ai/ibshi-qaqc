@@ -12,6 +12,7 @@ export const createNCRSchema = z.object({
   root_cause_category: z.string().max(50).optional().nullable(),
   assigned_to:         z.number().int().positive().optional().nullable(),
   due_date:            z.string().optional().nullable(),
+  sla_due_date:        z.string().optional().nullable(),
   hold_flag:           z.boolean().optional(),
 });
 

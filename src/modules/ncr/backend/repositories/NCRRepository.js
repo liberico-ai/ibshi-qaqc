@@ -1,4 +1,5 @@
 import { Repository, pool } from '../../../../core/db.js';
+import { computeSlaStatus } from '../services/SLAService.js';
 
 class NCRRepository extends Repository {
   constructor() {
@@ -45,7 +46,13 @@ class NCRRepository extends Repository {
       `, [ncrId]),
     ]);
     if (!ncr.rows[0]) return null;
-    return { ...ncr.rows[0], actions: actions.rows, history: history.rows };
+    const row = ncr.rows[0];
+    return {
+      ...row,
+      sla_status: computeSlaStatus(row),
+      actions: actions.rows,
+      history: history.rows,
+    };
   }
 
   async findAndCountList(filter, options) {
@@ -54,6 +61,19 @@ class NCRRepository extends Repository {
     if (filter.status)     { params.push(filter.status);     where.push(`n.status = $${params.length}`); }
     if (filter.project_id) { params.push(filter.project_id); where.push(`n.project_id = $${params.length}`); }
     if (filter.severity)   { params.push(filter.severity);   where.push(`n.severity = $${params.length}`); }
+
+    // Lọc theo trạng thái SLA (tính trên hạn SLA so với hôm nay).
+    // due = COALESCE(sla_due_date, due_date).
+    const SLA_FILTER = {
+      CLOSED:  `n.status = 'CLOSED'`,
+      OVERDUE: `n.status <> 'CLOSED' AND COALESCE(n.sla_due_date, n.due_date) IS NOT NULL AND COALESCE(n.sla_due_date, n.due_date) < CURRENT_DATE`,
+      AT_RISK: `n.status <> 'CLOSED' AND COALESCE(n.sla_due_date, n.due_date) IS NOT NULL AND COALESCE(n.sla_due_date, n.due_date) >= CURRENT_DATE AND COALESCE(n.sla_due_date, n.due_date) <= (CURRENT_DATE + INTERVAL '2 days')`,
+      ON_TIME: `n.status <> 'CLOSED' AND COALESCE(n.sla_due_date, n.due_date) IS NOT NULL AND COALESCE(n.sla_due_date, n.due_date) > (CURRENT_DATE + INTERVAL '2 days')`,
+    };
+    if (filter.sla_status && SLA_FILTER[filter.sla_status]) {
+      where.push(`(${SLA_FILTER[filter.sla_status]})`);
+    }
+
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
     const countRes = await pool.query(
@@ -73,7 +93,7 @@ class NCRRepository extends Repository {
     `, dataParams);
 
     return {
-      data: rows,
+      data: rows.map(r => ({ ...r, sla_status: computeSlaStatus(r) })),
       meta: { total, totalPages: options.limit ? Math.ceil(total / options.limit) : 1 },
     };
   }
@@ -133,15 +153,19 @@ class NCRRepository extends Repository {
     return rows[0];
   }
 
-  /** Liệt kê NCR mở đang quá hạn hoặc còn 2 ngày tới hạn (dùng cho escalation cron). */
+  /**
+   * Liệt kê NCR mở đang quá hạn hoặc còn 2 ngày tới hạn (dùng cho escalation cron).
+   * Ưu tiên hạn SLA (sla_due_date), nếu trống thì dùng due_date thủ công.
+   */
   async findDueSoonOrOverdue() {
     const { rows } = await pool.query(`
-      SELECT n.*, p.code AS project_code
+      SELECT n.*, p.code AS project_code,
+             COALESCE(n.sla_due_date, n.due_date) AS effective_due_date
       FROM ncr_records n
       LEFT JOIN qaqc_projects p ON p.id = n.project_id
       WHERE n.status NOT IN ('CLOSED')
-        AND n.due_date IS NOT NULL
-        AND n.due_date <= (CURRENT_DATE + INTERVAL '2 days')
+        AND COALESCE(n.sla_due_date, n.due_date) IS NOT NULL
+        AND COALESCE(n.sla_due_date, n.due_date) <= (CURRENT_DATE + INTERVAL '2 days')
     `);
     return rows;
   }

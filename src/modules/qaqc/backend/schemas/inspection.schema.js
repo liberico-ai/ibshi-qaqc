@@ -8,6 +8,9 @@ export const createInspectionSchema = z.object({
   unit_id: uuidSchema.optional().nullable(),
   ip_code: z.string().max(20).optional(),
   assigned_to: uuidSchema.optional().nullable(),
+  // device_id: UUID của cal_devices; weld_joint_ref: id (UUID) hoặc joint_no của mối hàn — tuỳ chọn.
+  device_id: uuidSchema.optional().nullable(),
+  weld_joint_ref: z.string().max(100).optional().nullable(),
 });
 
 const resultRowSchema = z.object({

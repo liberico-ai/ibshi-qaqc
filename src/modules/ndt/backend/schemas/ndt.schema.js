@@ -28,3 +28,11 @@ export const uploadResultSchema = z.object({
   report_no: z.string().max(100).optional().nullable(),
   file_link: z.string().url().max(2000).optional().nullable(),
 });
+
+// Nhà thầu nộp kết quả bằng token (không đăng nhập) — token nằm trong body.
+export const vendorSubmitResultSchema = z.object({
+  token: z.string().min(16).max(128),
+  result: z.enum(['accept', 'reject']),
+  report_no: z.string().max(100).optional().nullable(),
+  file_link: z.string().url().max(2000).optional().nullable(),
+});

@@ -43,9 +43,21 @@
           </div>
         </div>
 
-        <p class="text-xs text-slate-400">Khi chọn nhà thầu có email, hệ thống sẽ tự gửi thông báo yêu cầu tới nhà thầu.</p>
+        <p class="text-xs text-slate-400">Khi chọn nhà thầu có email, hệ thống sẽ tự gửi thông báo yêu cầu kèm liên kết token tới nhà thầu.</p>
 
-        <div class="flex justify-end gap-2">
+        <!-- Hiển thị token nhà thầu sau khi tạo (nếu có) để copy/gửi tay -->
+        <div v-if="vendorTokenLink" class="rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-2">
+          <div class="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Liên kết nộp kết quả cho nhà thầu (token dùng 1 lần)</div>
+          <div class="flex gap-2 items-center">
+            <input :value="vendorTokenLink" readonly class="form-control text-xs flex-1" />
+            <button @click="copyToken" type="button" class="btn btn-outline btn-sm">Sao chép</button>
+          </div>
+          <div class="text-right">
+            <router-link to="/ndt/requests" class="text-xs text-blue-600 hover:underline">Xong → về danh sách</router-link>
+          </div>
+        </div>
+
+        <div v-else class="flex justify-end gap-2">
           <router-link to="/ndt/requests" class="btn btn-outline">Hủy</router-link>
           <button @click="submit" :disabled="saving" class="btn btn-primary disabled:opacity-50">
             {{ saving ? 'Đang gửi...' : 'Gửi yêu cầu' }}
@@ -71,6 +83,7 @@ const vendors = ref([]);
 const saving = ref(false);
 const form = ref({ request_no: '', method: 'RT', vendor_id: '', weld_joint_ref: null, inspection_id: '' });
 const toast = ref({ show: false, ok: true, message: '' });
+const vendorTokenLink = ref('');
 
 async function loadVendors() {
   try {
@@ -94,12 +107,29 @@ async function submit() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Lỗi tạo yêu cầu');
-    router.push('/ndt/requests');
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Lỗi tạo yêu cầu');
+    // Nếu đã gửi nhà thầu → backend trả token; hiển thị liên kết để copy thay vì chuyển trang ngay.
+    if (json.data?.vendor_token) {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      vendorTokenLink.value = `${origin}/ndt/vendor/submit?token=${json.data.vendor_token}`;
+      showToast(true, 'Đã tạo yêu cầu & sinh token nhà thầu');
+    } else {
+      router.push('/ndt/requests');
+    }
   } catch (e) {
     showToast(false, e.message);
   } finally {
     saving.value = false;
+  }
+}
+
+async function copyToken() {
+  try {
+    if (navigator?.clipboard) await navigator.clipboard.writeText(vendorTokenLink.value);
+    showToast(true, 'Đã sao chép liên kết');
+  } catch {
+    showToast(false, 'Không sao chép được');
   }
 }
 

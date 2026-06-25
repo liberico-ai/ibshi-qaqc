@@ -109,6 +109,29 @@ class WeldMapRepository extends Repository {
 
 class WeldJointRepository extends Repository {
   constructor() { super('wld_weld_joints', {}); }
+
+  /**
+   * Tra cứu mối hàn kèm thợ hàn được gán + WPS.
+   * weldJointRef có thể là id (UUID) hoặc joint_no.
+   * Trả về null nếu không tìm thấy (không chặn nhầm khi thiếu dữ liệu).
+   */
+  async findForValidation(weldJointRef) {
+    if (!weldJointRef) return null;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      .test(String(weldJointRef));
+    const sql = `
+      SELECT j.id, j.joint_no, j.welder_id, j.wps_id,
+             ws.status AS wps_status, ws.wps_no,
+             w.welder_code, w.full_name AS welder_name
+      FROM wld_weld_joints j
+      LEFT JOIN wld_wps ws ON ws.id = j.wps_id
+      LEFT JOIN wld_welders w ON w.id = j.welder_id
+      WHERE ${isUuid ? 'j.id = $1' : 'j.joint_no = $1'}
+      ORDER BY j.created_at DESC
+      LIMIT 1`;
+    const { rows } = await pool.query(sql, [String(weldJointRef)]);
+    return rows[0] ?? null;
+  }
 }
 
 export const wpsRepo      = new WPSRepository();

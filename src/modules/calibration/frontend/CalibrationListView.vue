@@ -31,6 +31,11 @@
       </div>
     </UiCard>
 
+    <!-- Hint: thiết bị hết hạn sẽ bị chặn khi tạo phiếu kiểm tra -->
+    <div class="mb-4 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg px-3 py-2 print:hidden">
+      <span>⛔</span><span>{{ t('calibration.blockHint') }}</span>
+    </div>
+
     <UiCard body-class="p-0 overflow-x-auto">
       <table class="qc-table">
         <thead>

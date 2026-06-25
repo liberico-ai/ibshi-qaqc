@@ -1,6 +1,7 @@
 import { ndtRequestRepo, ndtVendorRepo, ndtResultRepo } from '../repositories/NDTRepository.js';
 import { AppError } from '../../../../core/errors.js';
 import { hooks } from '../../../../core/hooks.js';
+import { NDTVendorTokenService, syncInspectionFromResult } from './NDTVendorTokenService.js';
 
 export class NDTRequestService {
   /**
@@ -22,19 +23,25 @@ export class NDTRequestService {
     if (record.vendor_id) {
       const vendor = await ndtVendorRepo.findOne(record.vendor_id);
       if (vendor?.contact_email) {
+        // Sinh token phạm vi để nhà thầu nộp kết quả mà không cần đăng nhập đầy đủ.
+        const tk = await NDTVendorTokenService.generate(record.id, record.vendor_id);
+
         await hooks.doAction('qaqc.notification.event', {
           eventType: 'NDT_REQUEST_SENT',
           payload: {
             title:   `Yêu cầu NDT mới: ${record.request_no} (${record.method})`,
-            message: `Đề nghị thực hiện kiểm tra ${record.method} theo yêu cầu ${record.request_no} (ILS-QAC-F11).`,
+            message: `Đề nghị thực hiện kiểm tra ${record.method} theo yêu cầu ${record.request_no} (ILS-QAC-F11). Nộp kết quả qua liên kết token đính kèm.`,
             email:   vendor.contact_email,
-            link:    `/ndt/requests/${record.id}`,
+            link:    `/ndt/vendor/submit?token=${tk.token}`,
+            vendorToken: tk.token,
+            vendorTokenExpiresAt: tk.expires_at,
             requestId: record.id,
           },
           userIds: [],
         });
         await ndtRequestRepo.update(record.id, { status: 'SENT' });
         record.status = 'SENT';
+        record.vendor_token = tk.token; // trả về cho FE hiển thị/copy
       }
     }
 
@@ -64,6 +71,9 @@ export class NDTRequestService {
     });
 
     await ndtRequestRepo.update(requestId, { status: 'COMPLETED' });
+
+    // Đồng bộ ngược trạng thái về inspection liên kết (IP05): accept→PASSED, reject→FAILED.
+    await syncInspectionFromResult(requestId, reqRow.inspection_id, data.result, reqRow.request_no);
 
     // Thông báo kết quả về liên kết inspection/mối hàn
     await hooks.doAction('qaqc.notification.event', {

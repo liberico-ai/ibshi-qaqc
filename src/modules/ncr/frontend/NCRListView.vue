@@ -30,6 +30,14 @@
         <option value="major">{{ $t('ncr.severity.major') }}</option>
         <option value="critical">{{ $t('ncr.severity.critical') }}</option>
       </select>
+      <select v-model="slaStatus" @change="load(1)"
+        class="px-3 py-2 text-sm border border-gray-200 dark:border-[#252540] rounded-lg bg-white dark:bg-[#12122a] text-gray-800 dark:text-gray-100 outline-none">
+        <option value="">{{ $t('ncr.list.allSla') }}</option>
+        <option value="ON_TIME">{{ $t('ncr.sla.ON_TIME') }}</option>
+        <option value="AT_RISK">{{ $t('ncr.sla.AT_RISK') }}</option>
+        <option value="OVERDUE">{{ $t('ncr.sla.OVERDUE') }}</option>
+        <option value="CLOSED">{{ $t('ncr.sla.CLOSED') }}</option>
+      </select>
       <button @click="load(1)" class="btn btn-primary">{{ $t('ncr.list.filter') }}</button>
     </UiCard>
 
@@ -42,18 +50,23 @@
               <th>{{ $t('ncr.field.title') }}</th>
               <th>{{ $t('ncr.field.severity') }}</th>
               <th>{{ $t('ncr.field.status') }}</th>
+              <th>{{ $t('ncr.field.sla') }}</th>
               <th>{{ $t('ncr.field.dueDate') }}</th>
               <th class="text-right">{{ $t('ncr.field.action') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="loading"><td colspan="6" class="text-center text-slate-400 py-8">{{ $t('ncr.loading') }}</td></tr>
-            <tr v-else-if="!records.length"><td colspan="6" class="text-center text-slate-400 py-8">{{ $t('ncr.list.empty') }}</td></tr>
+            <tr v-if="loading"><td colspan="7" class="text-center text-slate-400 py-8">{{ $t('ncr.loading') }}</td></tr>
+            <tr v-else-if="!records.length"><td colspan="7" class="text-center text-slate-400 py-8">{{ $t('ncr.list.empty') }}</td></tr>
             <tr v-for="r in records" :key="r.id">
               <td class="font-semibold text-red-600 dark:text-red-400">{{ r.ncr_no }}</td>
               <td>{{ r.title }}</td>
               <td><StatusTag :type="severityColor(r.severity)" :label="$t('ncr.severity.' + r.severity)" /></td>
               <td><StatusTag :status="r.status" :label="$t('ncr.status.' + r.status)" /></td>
+              <td>
+                <StatusTag v-if="slaOf(r)" :type="slaColor(slaOf(r))" :label="$t('ncr.sla.' + slaOf(r))" />
+                <span v-else class="text-xs text-slate-400">—</span>
+              </td>
               <td class="text-xs" :class="isOverdue(r) ? 'text-red-600 dark:text-red-400 font-semibold' : ''">
                 {{ r.due_date ? new Date(r.due_date).toLocaleDateString('vi-VN') : '—' }}
               </td>
@@ -149,6 +162,7 @@ const records = ref([]);
 const loading = ref(false);
 const status = ref('');
 const severity = ref('');
+const slaStatus = ref('');
 const pagination = ref({ page: 1, totalPages: 1 });
 const modal = ref(false);
 const creating = ref(false);
@@ -176,9 +190,29 @@ const SEVERITY_TAG = { minor: 'gray', major: 'amber', critical: 'red' };
 function statusClass(s) { return STATUS_COLORS[s] ?? ''; }
 function severityClass(s) { return SEVERITY_COLORS[s] ?? ''; }
 function severityColor(s) { return SEVERITY_TAG[s] ?? 'gray'; }
+
+// SLA badge (BR03.01): xanh = đúng hạn, vàng = sắp tới hạn, đỏ = quá hạn.
+const SLA_TAG = { ON_TIME: 'green', AT_RISK: 'amber', OVERDUE: 'red', CLOSED: 'gray' };
+const AT_RISK_DAYS = 2;
+function slaColor(s) { return SLA_TAG[s] ?? 'gray'; }
+// Ưu tiên sla_status do backend tính; nếu thiếu thì tính tại client từ hạn SLA/hạn xử lý.
+function slaOf(r) {
+  if (r.sla_status) return r.sla_status;
+  if (r.status === 'CLOSED') return 'CLOSED';
+  const due = r.sla_due_date ?? r.due_date;
+  if (!due) return null;
+  const today = new Date(new Date().toDateString());
+  const d = new Date(new Date(due).toDateString());
+  const diff = Math.round((d - today) / 86400000);
+  if (diff < 0) return 'OVERDUE';
+  if (diff <= AT_RISK_DAYS) return 'AT_RISK';
+  return 'ON_TIME';
+}
 function isOverdue(r) {
-  if (!r.due_date || r.status === 'CLOSED') return false;
-  return new Date(r.due_date) < new Date(new Date().toDateString());
+  if (r.status === 'CLOSED') return false;
+  const due = r.sla_due_date ?? r.due_date;
+  if (!due) return false;
+  return new Date(due) < new Date(new Date().toDateString());
 }
 
 const summary = computed(() => {
@@ -195,7 +229,7 @@ const summary = computed(() => {
 async function load(page = 1) {
   loading.value = true;
   try {
-    const params = new URLSearchParams({ page, ...(status.value && { status: status.value }), ...(severity.value && { severity: severity.value }) });
+    const params = new URLSearchParams({ page, ...(status.value && { status: status.value }), ...(severity.value && { severity: severity.value }), ...(slaStatus.value && { slaStatus: slaStatus.value }) });
     const res = await apiFetch(`/api/ncr?${params}`);
     const json = await res.json();
     records.value = json.data ?? [];

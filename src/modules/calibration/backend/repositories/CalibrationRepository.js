@@ -62,6 +62,67 @@ class CalDeviceRepository extends Repository {
     return { data: rows, total: cnt[0].c };
   }
 
+  /**
+   * Trạng thái hiệu chuẩn hiện tại của 1 thiết bị (theo lần hiệu chuẩn mới nhất).
+   * @returns {Promise<{found:boolean, due_date:string|null, expired:boolean}>}
+   * - found=false: không tìm thấy thiết bị → KHÔNG kết luận hết hạn.
+   * - due_date=null: chưa có bản ghi hiệu chuẩn → expired=false (không chặn nhầm).
+   * - expired=true: chỉ khi due_date < hôm nay.
+   */
+  async calibrationStatus(deviceId) {
+    if (!deviceId) return { found: false, due_date: null, expired: false };
+    const { rows } = await pool.query(
+      `SELECT
+         (SELECT 1 FROM cal_devices WHERE id = $1) AS dev_exists,
+         r.due_date,
+         CASE WHEN r.due_date IS NOT NULL AND r.due_date < CURRENT_DATE
+              THEN true ELSE false END AS expired
+       FROM (
+         SELECT due_date FROM cal_records
+         WHERE device_id = $1
+         ORDER BY due_date DESC NULLS LAST, created_at DESC
+         LIMIT 1
+       ) r
+       RIGHT JOIN (SELECT 1) x ON TRUE`,
+      [deviceId]
+    );
+    const row = rows[0] || {};
+    return {
+      found: !!row.dev_exists,
+      due_date: row.due_date ?? null,
+      expired: !!row.expired,
+    };
+  }
+
+  /**
+   * Danh sách thiết bị còn hiệu lực hiệu chuẩn (cho bộ chọn thiết bị khi tạo phiếu KT).
+   * Loại trừ thiết bị đã hết hạn (due_date < hôm nay). Thiết bị chưa có bản ghi
+   * hiệu chuẩn (UNKNOWN) vẫn được liệt kê (không có bằng chứng hết hạn).
+   * Chỉ lấy thiết bị status='ACTIVE'.
+   */
+  async findAvailable(filter = {}) {
+    const params = [];
+    const where = [`d.status = 'ACTIVE'`];
+    if (filter.search) {
+      params.push(`%${filter.search}%`);
+      where.push(`(d.device_code ILIKE $${params.length} OR d.name ILIKE $${params.length})`);
+    }
+    const sql = `
+      SELECT d.id, d.device_code, d.name, d.type, d.location,
+             r.due_date, r.certificate_no,
+             CASE WHEN r.due_date IS NULL THEN 'UNKNOWN' ELSE 'VALID' END AS status_hsd
+      FROM cal_devices d
+      LEFT JOIN LATERAL (
+        SELECT * FROM cal_records cr WHERE cr.device_id = d.id
+        ORDER BY cr.due_date DESC NULLS LAST, cr.created_at DESC LIMIT 1
+      ) r ON TRUE
+      WHERE ${where.join(' AND ')}
+        AND (r.due_date IS NULL OR r.due_date >= CURRENT_DATE)
+      ORDER BY d.device_code`;
+    const { rows } = await pool.query(sql, params);
+    return rows;
+  }
+
   async findDetail(deviceId) {
     const [dev, records] = await Promise.all([
       pool.query('SELECT * FROM cal_devices WHERE id = $1', [deviceId]),

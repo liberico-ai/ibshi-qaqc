@@ -60,6 +60,35 @@ class NDTResultRepository extends Repository {
   constructor() { super('ndt_results', {}); }
 }
 
-export const ndtVendorRepo  = new NDTVendorRepository();
-export const ndtRequestRepo = new NDTRequestRepository();
-export const ndtResultRepo  = new NDTResultRepository();
+// ── Vendor scoped tokens ──────────────────────────────────────────
+class NDTVendorTokenRepository extends Repository {
+  constructor() { super('ndt_vendor_tokens', {}); }
+
+  /** Tìm token kèm thông tin yêu cầu NDT liên quan (1 lượt). */
+  async findByToken(token) {
+    const { rows } = await pool.query(
+      `SELECT t.*, r.request_no, r.method, r.status AS request_status,
+              r.inspection_id, r.weld_joint_ref, r.requested_by
+       FROM ndt_vendor_tokens t
+       JOIN ndt_requests r ON r.id = t.request_id
+       WHERE t.token = $1
+       LIMIT 1`,
+      [token]
+    );
+    return rows[0] ?? null;
+  }
+
+  /** Đánh dấu token đã sử dụng (chống tái sử dụng). */
+  async markUsed(id) {
+    const { rows } = await pool.query(
+      `UPDATE ndt_vendor_tokens SET used_at = now() WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    return rows[0];
+  }
+}
+
+export const ndtVendorRepo      = new NDTVendorRepository();
+export const ndtRequestRepo     = new NDTRequestRepository();
+export const ndtResultRepo      = new NDTResultRepository();
+export const ndtVendorTokenRepo = new NDTVendorTokenRepository();

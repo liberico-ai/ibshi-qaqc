@@ -1,6 +1,7 @@
 import { ncrRepo } from '../repositories/NCRRepository.js';
 import { AppError } from '../../../../core/errors.js';
 import { hooks } from '../../../../core/hooks.js';
+import { deriveSlaDueDate } from './SLAService.js';
 
 // 7-state workflow: OPEN → ASSIGNED → ROOT_CAUSE → CAPA_PLAN → IN_PROGRESS → VERIFY → CLOSED (+ REOPEN)
 const TRANSITIONS = {
@@ -21,6 +22,9 @@ export class NCRWorkflowService {
 
   static async create(data, userId) {
     const ncrNo = await ncrRepo.nextNcrNo();
+    const severity = data.severity ?? 'minor';
+    // Hạn SLA (BR03.01): nếu không truyền sla_due_date thì suy từ mức độ nghiêm trọng.
+    const slaDueDate = data.sla_due_date ?? data.due_date ?? deriveSlaDueDate(severity);
     const record = await ncrRepo.create({
       ncr_no:              ncrNo,
       project_id:          data.project_id ?? null,
@@ -28,11 +32,12 @@ export class NCRWorkflowService {
       description:         data.description ?? null,
       source_type:         data.source_type ?? 'manual',
       source_ref_id:       data.source_ref_id ?? null,
-      severity:            data.severity ?? 'minor',
+      severity,
       status:              data.assigned_to ? 'ASSIGNED' : 'OPEN',
       root_cause_category: data.root_cause_category ?? null,
       assigned_to:         data.assigned_to ?? null,
       due_date:            data.due_date ?? null,
+      sla_due_date:        slaDueDate,
       hold_flag:           data.hold_flag ?? false,
       created_by:          userId ?? null,
     });
@@ -163,7 +168,8 @@ export class NCRWorkflowService {
 
     let escalated = 0;
     for (const ncr of rows) {
-      const due = new Date(ncr.due_date);
+      const dueRaw = ncr.effective_due_date ?? ncr.sla_due_date ?? ncr.due_date;
+      const due = new Date(dueRaw);
       due.setHours(0, 0, 0, 0);
       const overdue = due < today;
       const userIds = [ncr.assigned_to, ncr.created_by].filter(Boolean);
@@ -174,8 +180,8 @@ export class NCRWorkflowService {
         payload: {
           title: overdue ? `NCR ${ncr.ncr_no} ĐÃ QUÁ HẠN` : `NCR ${ncr.ncr_no} sắp tới hạn`,
           message: overdue
-            ? `NCR ${ncr.ncr_no} đã quá hạn xử lý (hạn ${ncr.due_date}). Vui lòng xử lý ngay.`
-            : `NCR ${ncr.ncr_no} sẽ tới hạn vào ${ncr.due_date}.`,
+            ? `NCR ${ncr.ncr_no} đã quá hạn xử lý (hạn ${dueRaw}). Vui lòng xử lý ngay.`
+            : `NCR ${ncr.ncr_no} sẽ tới hạn vào ${dueRaw}.`,
           ncrId: ncr.id, link: `/ncr/${ncr.id}`, severity: ncr.severity,
         },
         userIds,

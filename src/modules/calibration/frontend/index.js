@@ -41,6 +41,7 @@ i18n.global.mergeLocaleMessage('vi', {
     requiredFields: 'Vui lòng nhập đủ thông tin bắt buộc',
     saved: 'Đã lưu',
     saveError: 'Lỗi khi lưu',
+    blockHint: 'Thiết bị đã hết hạn hiệu chuẩn sẽ bị chặn khi tạo phiếu kiểm tra.',
   },
 });
 
@@ -83,6 +84,7 @@ i18n.global.mergeLocaleMessage('en', {
     requiredFields: 'Please fill in required fields',
     saved: 'Saved',
     saveError: 'Save error',
+    blockHint: 'Devices with expired calibration are blocked when creating an inspection.',
   },
 });
 

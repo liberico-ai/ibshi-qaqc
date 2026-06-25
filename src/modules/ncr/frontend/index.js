@@ -18,6 +18,7 @@ i18n.global.mergeLocaleMessage('vi', {
       empty: 'Không có NCR nào',
       allStatus: 'Tất cả trạng thái',
       allSeverity: 'Tất cả mức độ',
+      allSla: 'Tất cả SLA',
     },
     stats: {
       total: 'Tổng NCR',
@@ -63,6 +64,7 @@ i18n.global.mergeLocaleMessage('vi', {
       description: 'Mô tả',
       severity: 'Mức độ',
       status: 'Trạng thái',
+      sla: 'SLA',
       dueDate: 'Hạn xử lý',
       assignedTo: 'Người được giao',
       sourceType: 'Nguồn phát sinh',
@@ -79,6 +81,12 @@ i18n.global.mergeLocaleMessage('vi', {
       VERIFY: 'Chờ xác minh', CLOSED: 'Đã đóng', REOPEN: 'Mở lại',
     },
     severity: { minor: 'Nhẹ', major: 'Nặng', critical: 'Nghiêm trọng' },
+    sla: {
+      ON_TIME: 'Đúng hạn',
+      AT_RISK: 'Sắp tới hạn',
+      OVERDUE: 'Quá hạn',
+      CLOSED: 'Đã đóng',
+    },
     source: { manual: 'Thủ công', inspection: 'Kiểm tra', mir: 'MIR' },
     actionType: { corrective: 'Khắc phục', preventive: 'Phòng ngừa' },
     actionStatus: { open: 'Mở', in_progress: 'Đang làm', done: 'Hoàn thành', verified: 'Đã xác minh' },
@@ -105,6 +113,7 @@ i18n.global.mergeLocaleMessage('en', {
       empty: 'No NCR found',
       allStatus: 'All statuses',
       allSeverity: 'All severities',
+      allSla: 'All SLA',
     },
     stats: {
       total: 'Total NCR',
@@ -146,7 +155,7 @@ i18n.global.mergeLocaleMessage('en', {
     },
     field: {
       ncrNo: 'NCR No', title: 'Title', description: 'Description', severity: 'Severity',
-      status: 'Status', dueDate: 'Due date', assignedTo: 'Assigned to',
+      status: 'Status', sla: 'SLA', dueDate: 'Due date', assignedTo: 'Assigned to',
       sourceType: 'Source', sourceRef: 'Source ref', project: 'Project',
       rootCause: 'Root cause category', action: 'Action', actionType: 'Action type', owner: 'Owner',
     },
@@ -156,6 +165,12 @@ i18n.global.mergeLocaleMessage('en', {
       VERIFY: 'Verify', CLOSED: 'Closed', REOPEN: 'Reopened',
     },
     severity: { minor: 'Minor', major: 'Major', critical: 'Critical' },
+    sla: {
+      ON_TIME: 'On time',
+      AT_RISK: 'At risk',
+      OVERDUE: 'Overdue',
+      CLOSED: 'Closed',
+    },
     source: { manual: 'Manual', inspection: 'Inspection', mir: 'MIR' },
     actionType: { corrective: 'Corrective', preventive: 'Preventive' },
     actionStatus: { open: 'Open', in_progress: 'In progress', done: 'Done', verified: 'Verified' },

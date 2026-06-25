@@ -41,7 +41,10 @@
           <tr v-if="loading"><td colspan="6" class="text-center text-slate-500 py-8">Đang tải...</td></tr>
           <tr v-else-if="!records.length"><td colspan="6" class="text-center text-slate-400 py-8">Chưa có yêu cầu NDT nào</td></tr>
           <tr v-for="r in records" :key="r.id">
-            <td class="font-semibold text-slate-800 dark:text-slate-200">{{ r.request_no }}</td>
+            <td class="font-semibold text-slate-800 dark:text-slate-200">
+              {{ r.request_no }}
+              <span v-if="r.auto_from_inspection" class="ml-1 inline-block text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 align-middle">IP05</span>
+            </td>
             <td><StatusTag :type="methodType(r.method)" :label="r.method" /></td>
             <td>{{ r.vendor_name ?? '—' }}</td>
             <td><StatusTag :type="statusType(r.status)" :label="statusLabel(r.status)" /></td>

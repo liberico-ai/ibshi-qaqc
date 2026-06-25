@@ -4,6 +4,10 @@ import { InspectionService } from '../services/InspectionService.js';
 import { InspectionRevisionService } from '../services/InspectionRevisionService.js';
 import { AppError } from '../../../../core/errors.js';
 import { auditLog } from '../../../../core/audit-log.js';
+import { hooks } from '../../../../core/hooks.js';
+import { createLogger } from '../../../../core/logger.js';
+
+const log = createLogger('inspection-controller');
 
 export class InspectionController {
   static async getAll(req, res) {
@@ -42,9 +46,60 @@ export class InspectionController {
     res.json({ data: record });
   }
 
+  /**
+   * Tạo phiếu nghiệm thu (Inspection / IP).
+   *
+   * ─── HỢP ĐỒNG HOOK (các agent khác build dựa trên đúng tên + payload này) ───
+   *
+   * 1) FILTER  `qaqc.inspection.preCreate`  — chạy TRƯỚC khi insert.
+   *    Chữ ký: (payload, req) => payload
+   *    payload shape (object, có thể bị handler chỉnh sửa rồi trả lại):
+   *      {
+   *        ip_code, project_id, plan_id, item_id, unit_id, assigned_to,
+   *        device_id, weld_joint_ref,        // tuỳ chọn (mối hàn / thiết bị đo)
+   *        ...req.body                        // các trường khác từ request
+   *      }
+   *    Handler CÓ THỂ ném AppError để CHẶN việc tạo phiếu — lỗi sẽ lan ra
+   *    asyncHandler và trả về cho client (không bị nuốt).
+   *
+   * 2) ACTION  `qaqc.inspection.created`  — chạy SAU khi insert thành công.
+   *    Chữ ký: (record) => void
+   *    record = bản ghi inspection vừa tạo (gồm id, status='PENDING', ...).
+   *    Dùng để các handler downstream (vd: tạo yêu cầu NDT) phản ứng. Lời gọi
+   *    được bọc try/catch + log ở đây để 1 handler downstream lỗi KHÔNG làm hỏng
+   *    việc tạo phiếu nghiệm thu.
+   * ───────────────────────────────────────────────────────────────────────────
+   */
   static async create(req, res) {
-    const { plan_id, item_id, project_id, unit_id, ip_code, assigned_to } = req.validated ?? req.body;
-    const record = await inspectionRepo.create({ plan_id, item_id, project_id, unit_id, ip_code, assigned_to, status: 'PENDING' });
+    const body = req.validated ?? req.body;
+    const { plan_id, item_id, project_id, unit_id, ip_code, assigned_to, device_id, weld_joint_ref } = body;
+
+    // FILTER trước khi insert — handler có thể chỉnh payload hoặc ném AppError để chặn.
+    const payload = await hooks.applyFilters(
+      'qaqc.inspection.preCreate',
+      { ip_code, project_id, plan_id, item_id, unit_id, assigned_to, device_id, weld_joint_ref, ...body },
+      req
+    );
+
+    const record = await inspectionRepo.create({
+      plan_id: payload.plan_id,
+      item_id: payload.item_id,
+      project_id: payload.project_id,
+      unit_id: payload.unit_id,
+      ip_code: payload.ip_code,
+      assigned_to: payload.assigned_to,
+      device_id: payload.device_id ?? null,
+      weld_joint_ref: payload.weld_joint_ref ?? null,
+      status: 'PENDING',
+    });
+
+    // ACTION sau khi insert — non-blocking: lỗi downstream không làm hỏng tạo phiếu.
+    try {
+      await hooks.doAction('qaqc.inspection.created', record);
+    } catch (err) {
+      log.error(err, 'qaqc.inspection.created hook failed — inspection still created');
+    }
+
     res.status(201).json({ data: record });
   }
 
